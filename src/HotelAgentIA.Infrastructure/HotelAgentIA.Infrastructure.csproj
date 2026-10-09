@@ -1,0 +1,6 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\HotelAgentIA.Application\HotelAgentIA.Application.csproj" />
+    <ProjectReference Include="..\HotelAgentIA.Domain\HotelAgentIA.Domain.csproj" />
+  </ItemGroup>
+</Project>

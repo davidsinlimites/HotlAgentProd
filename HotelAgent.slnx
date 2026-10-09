@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HotelAgentIA.Application/HotelAgentIA.Application.csproj" />
+    <Project Path="src/HotelAgentIA.Console/HotelAgentIA.Console.csproj" />
+    <Project Path="src/HotelAgentIA.Domain/HotelAgentIA.Domain.csproj" />
+    <Project Path="src/HotelAgentIA.Infrastructure/HotelAgentIA.Infrastructure.csproj" />
+  </Folder>
+</Solution>
