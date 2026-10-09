@@ -1,9 +1,21 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** A (Validación): documentación verificada y API mínima creada (`HotelAgentIA.Api`); `/modelo` probado en local; falta publicar en la prueba de 60 días de SmarterASP. Ver `PLAN.md` y `docs/FASE-A-VALIDACION.md`
+- **Fase actual:** A (Validación): API de prueba lista y probada en local; falta publicarla en SmarterASP y decidir hosting. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
 - **Fases cerradas:** 0, 1, 2 (del plan original, conservadas)
 - **Última sesión:** 2026-10-09
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
+
+## Para retomar (leer primero)
+- **Dónde nos quedamos:** fase A. La API de prueba (`src/HotelAgentIA.Api`) compila y `/health`, `/stream` y `/modelo` funcionan en local (`/modelo` responde 200 contra el modelo). Último commit subido: `a216b16`. Falta publicarla en la prueba de 60 días de SmarterASP y probar allí
+- **Pasos siguientes, en orden:**
+  1. El usuario crea el perfil de publicación en Visual Studio (clic derecho en `HotelAgentIA.Api` → Publicar, importando el archivo de Web Deploy descargado de SmarterASP) y publica solo ese proyecto
+  2. En el panel de SmarterASP: Control panel → Advance → Pool Manager → Actions → Environment Variables; crear `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` y `AZURE_OPENAI_DEPLOYMENT` (el `.env` no se publica a propósito)
+  3. Probar en el hosting `/health` (versión de .NET y memoria), `/stream` (los eventos deben llegar uno por segundo, no todos juntos) y `/modelo`
+  4. Anotar los resultados en `docs/FASE-A-VALIDACION.md` y decidir el hosting: SmarterASP (Advance o Premium) o plan B Azure App Service
+  5. Cerrar la fase A con un commit y empezar la fase B (PostgreSQL con EF Core, herramientas, agente con `IChatClient` de prueba)
+- **Si el usuario mueve la carpeta del proyecto:** el `.env` está ignorado por git, así que hay que copiarlo a mano a la raíz nueva (con las tres variables, cada una una sola vez). `.git` y `.claudeignore` viajan con la carpeta. Claude no lee `.env`; solo comprueba su estructura contando caracteres
+- **No hay que subir al repositorio:** el archivo de publicación de SmarterASP (contiene credenciales). Ya está en el `.gitignore` (`*.publishsettings`)
+- **Visual Studio:** compilar .NET 10 exige una versión reciente; si no la soporta, `dotnet publish -c Release` sobre `src/HotelAgentIA.Api` y subir la carpeta
 
 ## Cambio de rumbo (2026-10-09)
 Se pasa de ruta de aprendizaje (35 fases, Semantic Kernel primero) a **ruta corta a producción con Agent Framework directo**, sin Semantic Kernel. `PLAN.md` es el plan vigente; el `.docx` queda como referencia (sobre todo el Bloque 5 de producción). Fases A-E de `PLAN.md`: validación, núcleo, API, clientes, producción.
@@ -77,6 +89,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Fase A: la extensión `AsAIAgent` para `ChatClient` de OpenAI necesita `using OpenAI;` y `using OpenAI.Chat;` además de `Microsoft.Agents.AI`
 - Fase A: el endpoint es el del proyecto de Foundry (`*.services.ai.azure.com/api/projects/...`); `Azure.AI.OpenAI` 2.1.0 da "API version not supported" contra él. Se usa el cliente `OpenAI` apuntando a `<host>/openai/v1/` con la misma clave
 - Fase A: con `NoClobber`, una clave repetida en `.env` con valor vacío gana a la siguiente; cada variable debe aparecer una sola vez
+- Fase A: Visual Studio publica un solo proyecto (el del perfil), solo con lo que pertenece a su carpeta; por eso el `.env` de la raíz de la solución no se sube. Las variables del hosting se ponen en el panel (Pool Manager → Environment Variables, a nivel de pool) y no en el `web.config`, que Visual Studio puede regenerar al publicar
 - Fase A: ASP.NET Core no lee `.env` por sí solo; se usa DotNetEnv, y las variables de entorno reales tienen prioridad
 
 ## Limitaciones conocidas

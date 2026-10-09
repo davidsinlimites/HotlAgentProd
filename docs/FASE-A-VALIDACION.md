@@ -66,3 +66,20 @@ Prueba gratuita de 60 días disponible (pool de 800 MB).
 1. Crear el proyecto de prueba `HotelAgentIA.Api` (mínimo) con un endpoint `GET /stream` y otro `GET /modelo` que llame al modelo; publicarlo en la prueba de 60 días de SmarterASP.
 2. Decidir hosting con ese resultado.
 3. Empezar la fase B: Npgsql/EF Core en Infrastructure y el esqueleto del agente con `IChatClient` de prueba (modo offline).
+
+## 5. Publicación en SmarterASP (decisión de procedimiento)
+
+- Para la prueba de 60 días: perfil de Web Deploy descargado del panel e importado en Visual Studio, publicando solo `HotelAgentIA.Api`. Alternativa: `dotnet publish -c Release` y subir la carpeta. Conectar GitHub o automatizar con GitHub Actions queda para la fase de despliegue; no se verificó si SmarterASP integra GitHub directamente.
+- Variables en el hosting: Control panel → Advance → Pool Manager → Actions → Environment Variables ([guía](https://www.smarterasp.net/support/kb/a2156/how-to-set-environment-variable-for-your-account.aspx)). Se aplican a todo el pool. La alternativa `web.config` ([guía](https://www.smarterasp.net/support/kb/a1869/how-to-config-aspnetcore-environment-for-asp_net-core-application.aspx)) se descarta: puede regenerarse al publicar y deja la clave en un archivo de texto. Las guías son antiguas; confirmar en el panel actual.
+- El archivo de publicación contiene credenciales: no va al repositorio.
+
+## 6. Resultados en el hosting (pendiente de rellenar)
+
+| Prueba | Resultado |
+|---|---|
+| `/health`: versión de .NET y memoria | |
+| `/stream`: ¿llegan los eventos uno a uno? | |
+| `/modelo`: ¿responde 200 con las variables del pool? | |
+| Memoria del pool con el plan elegido | |
+| `pgvector` disponible en PostgreSQL | |
+| Decisión de hosting | |
