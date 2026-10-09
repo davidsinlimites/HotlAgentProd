@@ -1,6 +1,6 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** A (Validación), pendiente de empezar. Ver `PLAN.md`
+- **Fase actual:** A (Validación), documentación verificada; falta la prueba de concepto en SmarterASP. Ver `PLAN.md` y `docs/FASE-A-VALIDACION.md`
 - **Fases cerradas:** 0, 1, 2 (del plan original, conservadas)
 - **Última sesión:** 2026-10-09
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
