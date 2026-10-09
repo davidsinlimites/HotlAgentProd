@@ -20,9 +20,11 @@ Cambios en decisiones: MySQL → PostgreSQL; fase de SK eliminada; `ESTADO.md` y
 
 ## Fases propuestas
 
-**A. Validación (antes de escribir más código)**
-1. Verificar en documentación oficial: paquetes y versiones de Agent Framework (1.0), soporte .NET 10, `AIAgent`, `AgentSession`, `AIContextProvider`, Foundry.
-2. Verificar SmarterASP: versión de .NET soportada, PostgreSQL disponible, SSE sin buffering en IIS, tareas en segundo plano, HTTPS/dominio. Si falla alguna, plan B: Azure App Service o Container Apps para la API.
+**A. Validación (antes de escribir más código)** — *en curso; hallazgos en `docs/FASE-A-VALIDACION.md`*
+1. ✅ Documentación oficial verificada: Agent Framework va por 1.24 estable (no 1.0), soporte .NET 10, `AIAgent`, `AgentSession`, `ChatHistoryProvider`, `AgentSessionStore`. Pendiente: `AIContextProvider`, pasar el huésped a una herramienta, `RunStreamingAsync`.
+2. ◐ SmarterASP: confirmado en su web .NET 10, PostgreSQL, MySQL y WebSockets en todos los planes (cron solo en Premium). Falta probar en la prueba de 60 días con la API de prueba (`src/HotelAgentIA.Api`: `/stream`, `/modelo`): SSE sin buffering, memoria del pool (256-512 MB), salida al modelo y `pgvector`. Si falla alguna, plan B: Azure App Service.
+   - La API de prueba ya existe y compila; `/health` y `/stream` probados en local. `/modelo` espera las credenciales en `.env`.
+   - Sin identidad administrada fuera de Azure: acceso al modelo con clave de API en variables de entorno.
 3. Decidir hosting de PostgreSQL (SmarterASP o gestionado, p. ej. Azure Database for PostgreSQL).
 
 **B. Núcleo (reutiliza fases 3, 5 y 7 del plan, sin SK)**

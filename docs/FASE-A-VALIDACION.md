@@ -49,20 +49,20 @@ Prueba gratuita de 60 días disponible (pool de 800 MB).
 1. **SSE sin buffering**: la página no lo menciona. Probar un endpoint de streaming real.
 2. **Reciclado del pool y falta de "always on"**: en IIS compartido el proceso se duerme y se recicla; cualquier estado en memoria (el almacén actual, sesiones) se pierde. Por eso toda memoria debe ir a PostgreSQL, que ya es la decisión.
 3. **Límite de memoria 256-512 MB** en Basic/Advance: ajustado para ASP.NET Core + Agent Framework. Probar con 512 MB (Advance) como mínimo; Premium da margen.
-4. **Salida a Foundry** (HTTPS a `*.services.ai.azure.com`) y a Entra ID/Managed Identity: **la identidad administrada no existe fuera de Azure**. Habrá que autenticar con service principal (secreto o certificado) guardado como variable del hosting, no en el repositorio.
+4. **Salida al modelo** (HTTPS a `*.openai.azure.com`) y a Entra ID/Managed Identity: **la identidad administrada no existe fuera de Azure**. Se autentica con la clave de API de Azure OpenAI (variables `AZURE_OPENAI_*` del hosting, no en el repositorio); un service principal es la alternativa si se quiere Entra ID.
 5. **PostgreSQL**: versión y extensiones. `pgvector` no está confirmado; si no está, los vectores se resuelven con otra pieza o se omiten en el MVP (los datos del hotel van por herramientas, no por vectores).
 6. **Tareas en segundo plano**: el borrado de memoria al checkout necesita un cron; solo Premium lo trae. Alternativa: endpoint protegido llamado por un cron externo (p. ej. GitHub Actions programado).
 7. **Despliegue**: Web Deploy/FTP sin Key Vault; secretos como variables o `appsettings` fuera del repositorio.
 
 ## 3. Decisión provisional de hosting
 
-- Probar el plan de prueba de 60 días con un **endpoint de streaming de prueba y una llamada a Foundry**.
-- Si SSE, memoria y salida a Foundry funcionan: SmarterASP Advance o Premium para API + PostgreSQL, y frontend web estático en el mismo sitio.
+- Probar el plan de prueba de 60 días con un **endpoint de streaming de prueba y una llamada al modelo**.
+- Si SSE, memoria y salida al modelo funcionan: SmarterASP Advance o Premium para API + PostgreSQL, y frontend web estático en el mismo sitio.
 - Si falla alguno: **Azure App Service** (Linux, B1) para la API; PostgreSQL gestionado (Azure Database for PostgreSQL Flexible) o el de SmarterASP. Con Azure se gana identidad administrada, Key Vault y webjobs/timer.
 - Una prueba de concepto de una hora decide esto; no hace falta más investigación.
 
 ## 4. Siguientes pasos
 
-1. Crear el proyecto de prueba `HotelAgentIA.Api` (mínimo) con un endpoint `GET /stream` y otro que llame a Foundry; publicarlo en la prueba de 60 días de SmarterASP.
+1. Crear el proyecto de prueba `HotelAgentIA.Api` (mínimo) con un endpoint `GET /stream` y otro `GET /modelo` que llame al modelo; publicarlo en la prueba de 60 días de SmarterASP.
 2. Decidir hosting con ese resultado.
 3. Empezar la fase B: Npgsql/EF Core en Infrastructure y el esqueleto del agente con `IChatClient` de prueba (modo offline).
