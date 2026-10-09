@@ -1,5 +1,4 @@
 using System.ClientModel;
-using Azure.AI.OpenAI;
 using Microsoft.Agents.AI;
 using OpenAI;
 using OpenAI.Chat;
@@ -53,7 +52,11 @@ app.MapGet("/modelo", async (string? q, CancellationToken cancelacion) =>
             "Faltan AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY o AZURE_OPENAI_DEPLOYMENT.", statusCode: 503);
     }
 
-    AIAgent agente = new AzureOpenAIClient(new Uri(endpoint), new ApiKeyCredential(clave))
+    // El endpoint puede ser el del proyecto de Foundry (.../api/projects/...); la API compatible con
+    // OpenAI del mismo recurso cuelga de /openai/v1/ y acepta la clave de API.
+    var urlOpenAI = new Uri(new Uri(endpoint).GetLeftPart(UriPartial.Authority) + "/openai/v1/");
+
+    AIAgent agente = new OpenAIClient(new ApiKeyCredential(clave), new OpenAIClientOptions { Endpoint = urlOpenAI })
         .GetChatClient(despliegue)
         .AsAIAgent(instructions: "Eres un asistente breve. Responde en una frase.");
 

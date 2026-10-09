@@ -1,6 +1,6 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** A (Validación): documentación verificada y API mínima creada (`HotelAgentIA.Api`); faltan probar `/modelo` con las credenciales y publicar en la prueba de 60 días de SmarterASP. Ver `PLAN.md` y `docs/FASE-A-VALIDACION.md`
+- **Fase actual:** A (Validación): documentación verificada y API mínima creada (`HotelAgentIA.Api`); `/modelo` probado en local; falta publicar en la prueba de 60 días de SmarterASP. Ver `PLAN.md` y `docs/FASE-A-VALIDACION.md`
 - **Fases cerradas:** 0, 1, 2 (del plan original, conservadas)
 - **Última sesión:** 2026-10-09
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
@@ -55,7 +55,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Application (fase 2), carpeta `Memoria/`: `ClavesMemoria`, `ServicioPreferencias`, `ServicioConversacion`
 - Infrastructure (fase 2), carpeta `Memoria/`: `AlmacenMemoriaClaveValorEnMemoria` (`ConcurrentDictionary`; expone `Claves` solo para el banco de pruebas)
 - `HotelAgentIA.Console` referencia Application e Infrastructure; `Program.cs` ejecuta el escenario de dos huéspedes (305 y 412), con checkout del 305
-- `HotelAgentIA.Api` (fase A, prueba de concepto, no referencia aún a las demás capas): `Program.cs` con `GET /health`, `GET /stream?eventos=N` (SSE, un evento por segundo) y `GET /modelo?q=` (Azure OpenAI vía `AzureOpenAIClient(...).GetChatClient(despliegue).AsAIAgent(...)`; 503 si faltan variables). Carga `.env` con DotNetEnv (`NoClobber().TraversePath()`). Paquetes: `Microsoft.Agents.AI.OpenAI` 1.24.0, `Azure.AI.OpenAI` 2.1.0, `DotNetEnv` 3.2.0. Compila sin advertencias; `/health` y `/stream` probados en local, `/modelo` sin probar (faltan credenciales en `.env`)
+- `HotelAgentIA.Api` (fase A, prueba de concepto, no referencia aún a las demás capas): `Program.cs` con `GET /health`, `GET /stream?eventos=N` (SSE, un evento por segundo) y `GET /modelo?q=` (`OpenAIClient` con `Endpoint = <host>/openai/v1/` y la clave, `.GetChatClient(despliegue).AsAIAgent(...)`; 503 si faltan variables). Carga `.env` con DotNetEnv (`NoClobber().TraversePath()`). Paquetes: `Microsoft.Agents.AI.OpenAI` 1.24.0 y `DotNetEnv` 3.2.0. Compila sin advertencias; `/health`, `/stream` y `/modelo` probados en local (`/modelo` responde 200 contra el modelo)
 - `HotelAgent.slnx` referencia los 5 proyectos
 - `docs/FASE-A-VALIDACION.md`: hallazgos de la validación (versiones, API verificada, límites de SmarterASP)
 
@@ -75,6 +75,8 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Fase A: Agent Framework ya va por 1.24 estable (el plan Word decía 1.0). No incluye un almacén durable de sesiones (`AgentSessionStore`) ni de historial: los implementamos sobre PostgreSQL con `ChatHistoryProvider`
 - Fase A: el id de sesión que envía el cliente no prueba propiedad; se mapea a nuestro id interno y se verifica contra el huésped del token
 - Fase A: la extensión `AsAIAgent` para `ChatClient` de OpenAI necesita `using OpenAI;` y `using OpenAI.Chat;` además de `Microsoft.Agents.AI`
+- Fase A: el endpoint es el del proyecto de Foundry (`*.services.ai.azure.com/api/projects/...`); `Azure.AI.OpenAI` 2.1.0 da "API version not supported" contra él. Se usa el cliente `OpenAI` apuntando a `<host>/openai/v1/` con la misma clave
+- Fase A: con `NoClobber`, una clave repetida en `.env` con valor vacío gana a la siguiente; cada variable debe aparecer una sola vez
 - Fase A: ASP.NET Core no lee `.env` por sí solo; se usa DotNetEnv, y las variables de entorno reales tienen prioridad
 
 ## Limitaciones conocidas
@@ -93,7 +95,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Conservar preferencias para que el hotel decida: guardar solo estadísticas agregadas y anónimas en tablas aparte, y borrar lo individual en el checkout. Requiere consentimiento del huésped y revisar la normativa de privacidad aplicable
 
 ## Siguiente: fase A (Validación) y luego B (Núcleo)
-- Fase A, pendiente: rellenar `.env`, probar `/modelo` en local; publicar la API en la prueba de 60 días de SmarterASP y repetir `/stream` y `/modelo` allí; decidir hosting (ver `docs/FASE-A-VALIDACION.md`). Sin verificar aún: `AIContextProvider` en .NET, cómo pasar el huésped a una herramienta, `RunStreamingAsync`, `pgvector` en el PostgreSQL de SmarterASP
+- Fase A, pendiente: publicar la API en la prueba de 60 días de SmarterASP y repetir `/stream` y `/modelo` allí; decidir hosting (ver `docs/FASE-A-VALIDACION.md`). Sin verificar aún: `AIContextProvider` en .NET, cómo pasar el huésped a una herramienta, `RunStreamingAsync`, `pgvector` en el PostgreSQL de SmarterASP
 - Fase B incluye `ExtractorPreferencias` (antes fase 3), datos en PostgreSQL, herramientas y agente
 
 ### Detalle heredado de la fase 3
