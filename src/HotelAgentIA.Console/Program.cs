@@ -33,6 +33,8 @@ await PruebaBaseDatos.EjecutarAsync();
 
 await PruebaHerramientas.EjecutarAsync();
 
+await PruebaProveedores.EjecutarAsync();
+
 async Task MostrarEstadoAsync(string titulo)
 {
     Console.WriteLine($"=== {titulo} ===");

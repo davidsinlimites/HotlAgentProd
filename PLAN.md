@@ -28,11 +28,11 @@ Cambios en decisiones: MySQL → PostgreSQL; fase de SK eliminada; `ESTADO.md` y
 3. Decidir hosting de PostgreSQL (SmarterASP o gestionado, p. ej. Azure Database for PostgreSQL).
 
 **B. Núcleo (reutiliza fases 3, 5 y 7 del plan, sin SK)**
-4. `ExtractorPreferencias` (fase 3) o delegarlo al modelo vía herramienta; decidir tras probar.
-5. Datos del hotel en PostgreSQL con EF Core (Npgsql), semilla de ejemplo, `IRepositorioInfoHotel` en Infrastructure.
-6. Servicio `IHotelInfoService` (Application) y herramientas de solo lectura (horarios, menú, actividades, wifi) expuestas como tools de Agent Framework; el huésped viene del contexto del servidor, nunca del modelo.
-7. Agente: `IChatClient` hacia Foundry + `AIAgent` con tools; `AgentSession` para conversación; `AIContextProvider` sobre `IAlmacenMemoriaClaveValor` para preferencias.
-8. Modo offline: `IChatClient` falso para depurar y evaluar sin costo.
+4. ◐ `ExtractorPreferencias` (fase 3) o delegarlo al modelo vía herramienta; decidir tras probar. Pendiente; el proveedor que lee preferencias ya existe.
+5. ✅ Datos del hotel en PostgreSQL con EF Core (Npgsql), semilla de ejemplo, `IRepositorioInfoHotel` en Infrastructure.
+6. ✅ Servicio `IServicioInfoHotel` (Application) y herramientas de solo lectura (horarios, menú, actividades, wifi) expuestas como tools de Agent Framework; el huésped viene del contexto del servidor, nunca del modelo.
+7. ◐ Agente (proveedores de historial y preferencias hechos y probados offline; falta la fábrica y la conexión al modelo): `IChatClient` hacia Foundry + `AIAgent` con tools; `AgentSession` para conversación; `AIContextProvider` sobre `IAlmacenMemoriaClaveValor` para preferencias.
+8. ✅ Modo offline: `IChatClient` falso para depurar y evaluar sin costo (`ClienteChatFalso`, también simula llamadas a herramientas).
 
 **C. API (fases 11-15 del plan)**
 9. `HotelAgentIA.Api` (Minimal API), `POST /chat` y streaming SSE, OpenAPI.

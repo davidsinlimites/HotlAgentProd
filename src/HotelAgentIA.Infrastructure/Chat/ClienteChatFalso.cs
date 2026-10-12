@@ -25,6 +25,13 @@ public sealed class ClienteChatFalso : IChatClient
     }
 
     /// <summary>
+    /// Respuesta de texto calculada a partir de los mensajes Y de las opciones de la peticion
+    /// (instrucciones, herramientas): permite comprobar lo que el agente envia realmente al modelo.
+    /// </summary>
+    public static ClienteChatFalso ConResponder(Func<IReadOnlyList<ChatMessage>, ChatOptions?, string> responder) =>
+        new((mensajes, opciones) => [new TextContent(responder(mensajes, opciones))], TimeSpan.Zero);
+
+    /// <summary>
     /// Simula un modelo que, si la herramienta esta disponible en la peticion, la llama con los
     /// argumentos dados y despues responde con el resultado. Si la herramienta no llega en
     /// ChatOptions.Tools, lo dice: sirve para comprobar que las herramientas por peticion llegan.
