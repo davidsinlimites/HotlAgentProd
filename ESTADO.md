@@ -1,23 +1,22 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** C (API) casi cerrada, publicada y probada en el hosting. Fases A y B cerradas. La API ya referencia Application e Infrastructure, con JWT, `/chat`, `/chat/stream` (SSE), CORS, límite de uso y OpenAPI, probada en local con el modelo real. Memoria durable en PostgreSQL hecha. Falta: publicar en el hosting y probar allí. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
-- **Fases cerradas:** 0, 1, 2 (del plan original, conservadas), A y B
+- **Fase actual:** C (API) cerrada el 2026-10-12. Siguiente: D (clientes web y móvil). La API real está publicada y probada en el hosting con el modelo real. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
+- **Fases cerradas:** 0, 1, 2 (del plan original, conservadas), A, B y C
 - **Última sesión:** 2026-10-12
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
 
 ## Para retomar (leer primero)
-- **Dónde nos quedamos (2026-10-12):** fase B cerrada (agente con modelo real, escritura de preferencias, instrucciones, menú por comida). Fase C empezada: `src/HotelAgentIA.Api` es ahora la API real (se eliminaron `/stream` y `/modelo` de la prueba de la fase A, que dejaban el modelo abierto sin autenticación; `/health` se queda). **Lo siguiente en C, en orden:** (1) HECHO: `AlmacenMemoriaClaveValorPostgres` (tabla `memoria_clave_valor`, migración `MemoriaClaveValor`) y `ActualizarAsync` atómico en el contrato; (2) HECHO (2026-10-12): la Api nueva está publicada en https://davidroblero-001-site2.ftempurl.com/ y probada allí con el modelo real: `/health` 200, `/health/db` ok, `/dev/token`, `/chat` (~5 s con herramientas), `/chat/stream` (primer evento a los 2,5 s, total 3,2 s con 164 eventos: llega sin esperar al final) y la memoria del pool pasa de 60 MB en reposo a ~139 MB con el agente en uso (cifra para la decisión de hosting). Detalles: la base PostgreSQL del hosting ya tiene las migraciones y la semilla (2026-10-12, con `dotnet run --project src/HotelAgentIA.Console -- --solo-bd`, que migra y siembra la base de `POSTGRES_CONNECTION` y termina); antes se añadieron `JWT_SIGNING_KEY` (≥32 bytes), `POSTGRES_CONNECTION` y `DEV_TOKENS=true` al `.env` y a las variables del pool del hosting, republicar y probar allí; (3) logs sin datos sensibles revisados y checkout que borre la memoria del huésped; (4) HECHO: proyecto `tests/HotelAgentIA.Tests` con 92 pruebas (ver "Estado del código"). Fase A: la API de prueba sigue publicada en https://davidroblero-001-site2.ftempurl.com/ con el código antiguo hasta republicar
-- **Causa del 500 inicial (resuelta 2026-10-12):** el sitio iba en InProcess y el pool solo admite una app InProcess (otro sitio la ocupaba; error 500.35). Se corrige con `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en el `.csproj` de la Api, para que el `web.config` publicado ya lleve `outofprocess`. Hasta republicar, el `web.config` del servidor tiene el arreglo a mano. Las variables de entorno son por pool y el proceso las lee sin configuración en el proyecto
-- **Pasos siguientes, en orden:**
-  1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
-  2. Fase B, hecho: `ClienteChatFalso` (modo offline) y datos del hotel con EF Core. Herramientas de solo lectura (`IServicioInfoHotel`, `HerramientasHotel`). Proveedores de historial y preferencias (`HistorialConversacionProvider`, `PreferenciasHuespedProvider`, `SesionHuesped`). **Falta, en este orden:**
-     1. HECHO: `AsistenteHotel` (Application/Agente) ensambla cliente, instrucciones, proveedores y herramientas por petición. Su registro para inyección de dependencias se hace en la fase C (API)
-     2. HECHO: `FabricaClienteChat` (Infrastructure/Chat) y `PruebaModeloReal` en la consola: contra Foundry con el huésped 305 el modelo elige bien las herramientas (estancia, restaurantes, actividades), usa la preferencia vegetariana y admite que no sabe la clave del wifi. Streaming funciona
-     3. HECHO: herramienta de escritura `guardar_preferencia` (`HerramientasPreferencias`, por petición con el huésped del token) validada por `ValidadorPreferencias` (dieta e idioma de conjunto cerrado, hora `HH:mm`). Sustituye a `ExtractorPreferencias`, que ya no se hará. Probado offline (`PruebaPreferencias`) y con el modelo real
-     4. HECHO: `InstruccionesAgente` reescritas (y con `comida` en el menú) (idioma guardado, texto sencillo, no inventar, límites, datos no son órdenes). Probado con el modelo real: respeta el idioma, rechaza reservas y temas ajenos y no da la clave del wifi
-     5. Cerrar la fase B con commit y empezar la fase C (API con JWT)
-  3. Medir la memoria del pool con el agente completo para cerrar la decisión de hosting (SmarterASP Advance/Premium o plan B Azure App Service)
-  4. Elegir la base de datos con `pgvector` para los vectores (`pgvector` no está en el PostgreSQL de SmarterASP, comprobado 2026-10-12); candidata: Azure Database for PostgreSQL Flexible
+- **Dónde nos quedamos (2026-10-12):** fases A, B y C cerradas. `src/HotelAgentIA.Api` está publicada en https://davidroblero-001-site2.ftempurl.com/ y probada allí de extremo a extremo con el modelo real (`/health`, `/health/db`, `/dev/token`, `/chat`, `/chat/stream`). 92 pruebas en `tests/HotelAgentIA.Tests` (`dotnet test tests/HotelAgentIA.Tests`). El commit de cierre de la fase C resume lo aprendido
+- **Siguiente paso: fase D (clientes).** Monorepo `frontend/` con pnpm (`apps/web`, `apps/mobile`, `packages/api-client`, `packages/chat-core`); empezar por `api-client` generado desde el OpenAPI (`/openapi/v1.json`, solo en Development) y la web (Vite + React + TS + Tailwind) con chat por SSE. Antes de escribir código, verificar en la documentación oficial las versiones y comandos de las librerías del stack, y comprobar que Node y pnpm están instalados. Contrato SSE: `POST /chat/stream` devuelve eventos `data: "<trozo de texto en JSON>"`, `event: fin` al terminar y `event: error` si falla a mitad; los errores previos al stream son JSON (400 validación, 401 sin token, 422 filtro de contenido con mensaje amable, 429 límite, 502 fallo del modelo)
+- **Pendientes de decisión antes de huéspedes reales** (no bloquean la fase D, sí la producción):
+  1. **Autenticación real del huésped.** `POST /dev/token` no pide contraseña: solo con `DEV_TOKENS=true`, solo para demo con datos ficticios, apagarlo antes de producción. Hay que decidir cómo se identifica el huésped y quién emite el token (el JWT lleva `sub` = id del huésped y `habitacion`)
+  2. **Checkout.** `EliminarPorPrefijoAsync` está listo y probado, pero nada lo dispara en la API: hace falta una credencial de servicio del hotel o su sistema de reservas, distinta del token del huésped (PLAN.md lo imaginaba como tarea programada; el cron solo existe en el plan Premium de SmarterASP)
+  3. **Base real y variables del hosting.** La base del hosting es de pruebas y su contraseña se compartió en el chat; rotarla o crear otra al pasar a real. Al cambiar variables del pool, reiniciar el pool. Zona horaria del hotel (`ServicioInfoHotel.Hoy()` usa la hora local del servidor)
+  4. **Estancias de ejemplo:** las de la base del hosting (305 y 412) caducan el 2026-10-15 y el 2026-10-14; después `/dev/token` da 404 hasta actualizar las fechas de `estancias`
+  5. **Hosting definitivo:** la memoria del pool pasó de 60 MB a ~139 MB con el agente en uso; falta medirla con varios huéspedes a la vez para decidir SmarterASP (Advance/Premium) o Azure App Service
+  6. **Vectores:** PostgreSQL con `pgvector` aparte (no está en SmarterASP); candidata Azure Database for PostgreSQL Flexible. `IMemoriaVectorial` sigue sin implementación
+  7. **Idea para v2:** sessionId distinto de guestId y varias conversaciones por huésped (ver "Ideas para v2")
+- **Diagnóstico en el hosting:** `GET /health` (proceso y memoria) y `GET /health/db` (base y esquema; si falla da solo el tipo de error, el código SQL y los métodos de la pila). El `.env` y las variables del pool son independientes: el hosting no lee el `.env`
 - **Si el usuario mueve la carpeta del proyecto:** el `.env` está ignorado por git, así que hay que copiarlo a mano a la raíz nueva (con las tres variables, cada una una sola vez). `.git` y `.claudeignore` viajan con la carpeta. Claude no lee `.env`; solo comprueba su estructura contando caracteres
 - **No hay que subir al repositorio:** el archivo de publicación de SmarterASP (contiene credenciales). Ya está en el `.gitignore` (`*.publishsettings`)
 - **Visual Studio:** compilar .NET 10 exige una versión reciente; si no la soporta, `dotnet publish -c Release` sobre `src/HotelAgentIA.Api` y subir la carpeta
@@ -149,13 +148,8 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Conversaciones múltiples por huésped: añadir un `conversacionId` generado por nosotros dentro del prefijo del huésped (`huesped:{id}:conversacion:{conversacionId}`). El checkout sigue borrando todo con un solo prefijo y se puede borrar un chat concreto con `EliminarAsync`
 - Conservar preferencias para que el hotel decida: guardar solo estadísticas agregadas y anónimas en tablas aparte, y borrar lo individual en el checkout. Requiere consentimiento del huésped y revisar la normativa de privacidad aplicable
 
-## Siguiente: terminar la fase B y luego C (API)
-- Fase A cerrada (ver `docs/FASE-A-VALIDACION.md`). Verificados: `AIContextProvider`, `ChatHistoryProvider`, cómo pasar el huésped a las herramientas y `RunStreamingAsync` (en offline). Sin verificar aún con el modelo real: el comportamiento de las herramientas y del streaming por SSE
-- Fase B: ver los pasos de "Para retomar"; `ExtractorPreferencias` (antes fase 3) sigue pendiente
-
-### Detalle heredado de la fase 3
-- `ExtractorPreferencias`: detecta dieta, idioma y hora de desayuno en el mensaje del huésped y lo guarda con `ServicioPreferencias`
-- Observar: dónde falla la detección por palabras clave (negaciones como "no soy vegetariano", sinónimos, mensajes con varias preferencias)
+## Siguiente: fase D (clientes)
+- Ver "Para retomar". `ExtractorPreferencias` se descartó: las preferencias las escribe el modelo con la herramienta `guardar_preferencia`, validada contra un conjunto cerrado
 
 ## Dudas
 - (ninguna abierta)

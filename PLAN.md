@@ -20,26 +20,26 @@ Cambios en decisiones: MySQL → PostgreSQL; fase de SK eliminada; `ESTADO.md` y
 
 ## Fases propuestas
 
-**A. Validación (antes de escribir más código)** — *en curso; hallazgos en `docs/FASE-A-VALIDACION.md`*
+**A. Validación** — ✅ *cerrada; hallazgos en `docs/FASE-A-VALIDACION.md`*
 1. ✅ Documentación oficial verificada: Agent Framework va por 1.24 estable (no 1.0), soporte .NET 10, `AIAgent`, `AgentSession`, `ChatHistoryProvider`, `AgentSessionStore`. Pendiente: `AIContextProvider`, pasar el huésped a una herramienta, `RunStreamingAsync`.
-2. ◐ SmarterASP: confirmado en su web .NET 10, PostgreSQL, MySQL y WebSockets en todos los planes (cron solo en Premium). Falta probar en la prueba de 60 días con la API de prueba (`src/HotelAgentIA.Api`: `/stream`, `/modelo`): SSE sin buffering, memoria del pool (256-512 MB), y salida al modelo. `pgvector` no está disponible en SmarterASP: los vectores irán en otra base. Si falla alguna, plan B: Azure App Service.
+2. ✅ SmarterASP (validado con la API de prueba y después con la API real: SSE sin buffering, memoria ~60 → ~139 MB, salida al modelo, `OutOfProcess`): confirmado en su web .NET 10, PostgreSQL, MySQL y WebSockets en todos los planes (cron solo en Premium). Falta probar en la prueba de 60 días con la API de prueba (`src/HotelAgentIA.Api`: `/stream`, `/modelo`): SSE sin buffering, memoria del pool (256-512 MB), y salida al modelo. `pgvector` no está disponible en SmarterASP: los vectores irán en otra base. Si falla alguna, plan B: Azure App Service.
    - La API de prueba ya existe y compila; `/health` y `/stream` probados en local. `/modelo` probado en local (200 contra el modelo).
    - Sin identidad administrada fuera de Azure: acceso al modelo con clave de API en variables de entorno.
 3. Decidir hosting de PostgreSQL (SmarterASP o gestionado, p. ej. Azure Database for PostgreSQL).
 
-**B. Núcleo (reutiliza fases 3, 5 y 7 del plan, sin SK)**
-4. ◐ `ExtractorPreferencias` (fase 3) o delegarlo al modelo vía herramienta; decidir tras probar. Pendiente; el proveedor que lee preferencias ya existe.
+**B. Núcleo (reutiliza fases 3, 5 y 7 del plan, sin SK)** — ✅ *cerrada*
+4. ✅ Decidido: no hay `ExtractorPreferencias`; el modelo llama a la herramienta `guardar_preferencia`, validada contra valores cerrados (`ValidadorPreferencias`).
 5. ✅ Datos del hotel en PostgreSQL con EF Core (Npgsql), semilla de ejemplo, `IRepositorioInfoHotel` en Infrastructure.
 6. ✅ Servicio `IServicioInfoHotel` (Application) y herramientas de solo lectura (horarios, menú, actividades, wifi) expuestas como tools de Agent Framework; el huésped viene del contexto del servidor, nunca del modelo.
-7. ◐ Agente (proveedores de historial y preferencias hechos y probados offline; falta la fábrica y la conexión al modelo): `IChatClient` hacia Foundry + `AIAgent` con tools; `AgentSession` para conversación; `AIContextProvider` sobre `IAlmacenMemoriaClaveValor` para preferencias.
+7. ✅ Agente (`AsistenteHotel`, conectado y probado con Foundry): `IChatClient` hacia Foundry + `AIAgent` con tools; `AgentSession` para conversación; `AIContextProvider` sobre `IAlmacenMemoriaClaveValor` para preferencias.
 8. ✅ Modo offline: `IChatClient` falso para depurar y evaluar sin costo (`ClienteChatFalso`, también simula llamadas a herramientas).
 
-**C. API (fases 11-15 del plan)**
-9. `HotelAgentIA.Api` (Minimal API), `POST /chat` y streaming SSE, OpenAPI.
-10. JWT con guestId/habitación/estancia; CORS para web y móvil; rate limiting; manejo de errores; logs sin datos sensibles.
-11. Memoria persistente en PostgreSQL; sessionId distinto de guestId; borrado en checkout (tarea programada).
+**C. API (fases 11-15 del plan)** — ✅ *cerrada (2026-10-12), con puntos aplazados a producción*
+9. ✅ `HotelAgentIA.Api` (Minimal API), `POST /chat` y streaming SSE, OpenAPI.
+10. ✅ JWT (`sub` = huésped, `habitacion`; caduca como máximo a la salida de la estancia); CORS por `CORS_ORIGINS`; límite de 20 peticiones/min por huésped; errores controlados (400, 401, 422, 429, 502); logs sin mensajes del huésped. **Aplazado a producción:** login real del huésped (hoy `POST /dev/token`, solo demo).
+11. ✅ Memoria persistente en PostgreSQL con actualización atómica por clave. **Aplazado:** disparador del borrado en checkout (el mecanismo existe y está probado; falta la credencial de servicio del hotel) y sessionId distinto de guestId (v2).
 
-**D. Clientes** (todo con librerías gratuitas de código abierto; stack detallado en la sección siguiente)
+**D. Clientes** — ⏭ *siguiente* (todo con librerías gratuitas de código abierto; stack detallado en la sección siguiente)
 12. Monorepo `frontend/` con pnpm workspaces: `apps/web`, `apps/mobile`, `packages/api-client`, `packages/chat-core`.
 13. `api-client`: cliente TypeScript generado desde el OpenAPI de la API.
 14. Web: Vite + React + TypeScript + Tailwind, chat con streaming SSE.
@@ -84,5 +84,5 @@ Cambios en decisiones: MySQL → PostgreSQL; fase de SK eliminada; `ESTADO.md` y
 ## Verificación
 - Fase A: documento de hallazgos con versiones y límites confirmados.
 - `dotnet build HotelAgent.slnx` y consola con huéspedes 305/412 funcionando offline tras cada fase.
-- API: prueba manual con JWT de dos huéspedes; pedir el wifi de otra habitación debe fallar.
+- API: ✅ 92 pruebas automáticas (incluido que un huésped no ve datos de otro, aunque lo pida en el cuerpo de la petición) y prueba manual en el hosting con el modelo real.
 - Clientes: flujo de chat extremo a extremo en web y en emulador móvil.
