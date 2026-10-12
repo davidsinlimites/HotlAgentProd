@@ -6,4 +6,7 @@
     <Project Path="src/HotelAgentIA.Domain/HotelAgentIA.Domain.csproj" />
     <Project Path="src/HotelAgentIA.Infrastructure/HotelAgentIA.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HotelAgentIA.Tests/HotelAgentIA.Tests.csproj" />
+  </Folder>
 </Solution>

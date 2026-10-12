@@ -117,3 +117,6 @@ if (config.GetValue<bool>("DEV_TOKENS"))
 app.MapearChat();
 
 app.Run();
+
+// Visible para WebApplicationFactory en el proyecto de tests
+public partial class Program;
