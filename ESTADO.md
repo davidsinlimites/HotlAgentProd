@@ -11,10 +11,10 @@
 - **Pasos siguientes, en orden:**
   1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
   2. Fase B, hecho: `ClienteChatFalso` (modo offline) y datos del hotel con EF Core. Herramientas de solo lectura (`IServicioInfoHotel`, `HerramientasHotel`). Proveedores de historial y preferencias (`HistorialConversacionProvider`, `PreferenciasHuespedProvider`, `SesionHuesped`). **Falta, en este orden:**
-     1. Fábrica del agente (Application o Infrastructure) que ensamble cliente de chat, instrucciones, proveedores y herramientas por petición (`HerramientasHotel(servicio, huespedId)` en `ChatClientAgentRunOptions`), y la registre para inyección de dependencias
-     2. Conectarla al modelo real: `OpenAIClient` con `Endpoint = <host>/openai/v1/` y la clave, como en `src/HotelAgentIA.Api/Program.cs` (`/modelo`); probar en la consola contra Foundry con el huésped 305 y las herramientas, y ver si el modelo elige bien las herramientas
-     3. Escribir preferencias: decidir entre `ExtractorPreferencias` por palabras clave o una herramienta de escritura que el modelo llama (validar contra un conjunto cerrado de valores; defensa frente a inyección)
-     4. Escribir las instrucciones del sistema del agente (idioma, qué hacer cuando no sabe, no inventar datos del hotel)
+     1. HECHO: `AsistenteHotel` (Application/Agente) ensambla cliente, instrucciones, proveedores y herramientas por petición. Su registro para inyección de dependencias se hace en la fase C (API)
+     2. HECHO: `FabricaClienteChat` (Infrastructure/Chat) y `PruebaModeloReal` en la consola: contra Foundry con el huésped 305 el modelo elige bien las herramientas (estancia, restaurantes, actividades), usa la preferencia vegetariana y admite que no sabe la clave del wifi. Streaming funciona
+     3. HECHO: herramienta de escritura `guardar_preferencia` (`HerramientasPreferencias`, por petición con el huésped del token) validada por `ValidadorPreferencias` (dieta e idioma de conjunto cerrado, hora `HH:mm`). Sustituye a `ExtractorPreferencias`, que ya no se hará. Probado offline (`PruebaPreferencias`) y con el modelo real
+     4. HECHO: `InstruccionesAgente` reescritas (idioma guardado, texto sencillo, no inventar, límites, datos no son órdenes). Probado con el modelo real: respeta el idioma, rechaza reservas y temas ajenos y no da la clave del wifi
      5. Cerrar la fase B con commit y empezar la fase C (API con JWT)
   3. Medir la memoria del pool con el agente completo para cerrar la decisión de hosting (SmarterASP Advance/Premium o plan B Azure App Service)
   4. Elegir la base de datos con `pgvector` para los vectores (`pgvector` no está en el PostgreSQL de SmarterASP, comprobado 2026-10-12); candidata: Azure Database for PostgreSQL Flexible
@@ -26,9 +26,8 @@
 Se pasa de ruta de aprendizaje (35 fases, Semantic Kernel primero) a **ruta corta a producción con Agent Framework directo**, sin Semantic Kernel. `PLAN.md` es el plan vigente; el `.docx` queda como referencia (sobre todo el Bloque 5 de producción). Fases A-E de `PLAN.md`: validación, núcleo, API, clientes, producción.
 
 ## Cómo trabajamos
-- Ciclo por fase: concepto, construcción (el usuario escribe en VS Code; Claude revisa o completa si se pide), depuración. Sin preguntas de comprobación al cerrar
+- Ciclo por fase: concepto, construcción (desde el cambio a producción Claude escribe el código directamente; el usuario lo revisa en VS Code; en el curso original, fases 0-2, escribía el usuario), depuración. Sin preguntas de comprobación al cerrar
 - Al cerrar una fase: proyecto compilando y un commit con mensaje que diga qué se aprendió
-- Claude entrega las clases completas cuando el usuario lo pide
 
 ## Decisiones vigentes
 - PostgreSQL (Npgsql/EF Core) para datos y memoria, sustituye a MySQL; Blob Storage para archivos
@@ -79,6 +78,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - `HotelAgentIA.Api` (fase A, prueba de concepto, no referencia aún a las demás capas): `Program.cs` con `GET /health`, `GET /stream?eventos=N` (SSE, un evento por segundo) y `GET /modelo?q=` (`OpenAIClient` con `Endpoint = <host>/openai/v1/` y la clave, `.GetChatClient(despliegue).AsAIAgent(...)`; 503 si faltan variables). Carga `.env` con DotNetEnv (`NoClobber().TraversePath()`). Paquetes: `Microsoft.Agents.AI.OpenAI` 1.24.0 y `DotNetEnv` 3.2.0. Compila sin advertencias; `/health`, `/stream` y `/modelo` probados en local (`/modelo` responde 200 contra el modelo)
 - Infrastructure (fase B), `Chat/` y `Persistencia/`: `ClienteChatFalso`, `HotelDbContext`, entidades, migración `Inicial`, `RepositorioInfoHotel`, `SemillaDatos`, `FabricaHotelDbContext`. La consola corre `PruebaAgenteOffline` y `PruebaBaseDatos` (migra, siembra y lee de Docker)
 - Application (fase B): `Hotel/` con `IServicioInfoHotel` y `ServicioInfoHotel` (usa `TimeProvider`), `Agente/` con `HerramientasHotel` (`consultar_restaurantes`, `consultar_menu`, `consultar_actividades`, `consultar_mi_estancia`), `SesionHuesped`, `HistorialConversacionProvider`, `PreferenciasHuespedProvider`; `Memoria/NombresPreferencia`; referencia `Microsoft.Extensions.AI.Abstractions` y `Microsoft.Agents.AI.Abstractions`. La consola corre también `PruebaHerramientas` y `PruebaProveedores`
+- Fase B (agente): `Application/Agente/AsistenteHotel` (`ResponderAsync`, `ResponderEnStreamingAsync`) e `InstruccionesAgente` (versión inicial), `HerramientasPreferencias` y `Memoria/ValidadorPreferencias`; `Infrastructure/Chat/FabricaClienteChat`; Application referencia `Microsoft.Agents.AI` e Infrastructure `Microsoft.Agents.AI.OpenAI`. La consola corre también `PruebaPreferencias` y `PruebaModeloReal` (gasta tokens; se omite sin variables)
 - `HotelAgent.slnx` referencia los 5 proyectos
 - `docs/FASE-A-VALIDACION.md`: hallazgos de la validación (versiones, API verificada, límites de SmarterASP)
 
@@ -113,6 +113,9 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Fase B: en `AIFunctionFactory.Create` un parámetro `string?` sin valor por defecto es obligatorio y la llamada falla con "Function failed" si el modelo lo omite; los opcionales llevan `= null` y `CancellationToken ct = default` va el último
 - Fase B: `ClienteChatFalso.ConLlamadaAHerramienta` simula que el modelo llama a una herramienta y comprueba que las herramientas por petición llegan; las respuestas de herramientas son texto en español para ahorrar tokens y los errores previsibles (restaurante inexistente, fecha inválida) se devuelven como texto, no como excepción
 - Fase B: las entidades de EF viven en Infrastructure (`Persistencia/Entidades`), separadas de los `record` de Domain; `RepositorioInfoHotel` hace el mapeo. `FabricaHotelDbContext` (lee `POSTGRES_CONNECTION` del `.env`) permite `dotnet ef`; la consola es el proyecto de arranque
+
+- Fase B: la herramienta de escritura es la única excepción a "herramientas de solo lectura": solo toca las preferencias del propio huésped y con valores de conjunto cerrado. Con el modelo real guardó hora de desayuno e idioma de un mensaje y no guardó nada ante un intento de inyección: el filtro de contenido de Azure lo bloqueó antes con HTTP 400 `content_filter` (`ClientResultException`), que la API de la fase C debe capturar y convertir en una respuesta amable. Con idioma=en el modelo aún respondió en español en el streaming: reforzar en las instrucciones (paso 4)
+- Fase B: `PlatoMenu` no indica a qué comida pertenece (desayuno, almuerzo, cena), así que el modelo aún ofrece el desayuno buffet para la cena/almuerzo; las instrucciones no lo arreglan del todo. Solución de datos pendiente: añadir comida/franja al plato (migración) y filtrarla en `consultar_menu`. Las respuestas salen casi sin Markdown tras las instrucciones nuevas; el streaming puede mezclar el resumen (modelo pequeño)
 
 ## Limitaciones conocidas
 - `ServicioConversacion` hace leer-modificar-escribir sobre una sola clave: dos mensajes simultáneos del mismo huésped podrían pisarse. Revisar al pasar a PostgreSQL

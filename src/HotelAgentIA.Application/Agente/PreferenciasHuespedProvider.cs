@@ -5,7 +5,7 @@ namespace HotelAgentIA.Application.Agente;
 
 /// <summary>
 /// Anade a las instrucciones de cada peticion las preferencias conocidas del huesped (dieta, idioma...).
-/// Solo lee; guardar preferencias sera cosa del extractor o de una herramienta de escritura.
+/// Solo lee; las preferencias se escriben con HerramientasPreferencias.
 /// </summary>
 public sealed class PreferenciasHuespedProvider(ServicioPreferencias preferencias) : AIContextProvider
 {
