@@ -41,6 +41,20 @@ public class ApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Health_db_informa_del_fallo_sin_revelar_la_cadena_de_conexion()
+    {
+        // En las pruebas la base no existe (cadena falsa): debe dar 503 con solo el tipo de error
+        var respuesta = await _cliente.GetAsync("/health/db");
+        var cuerpo = await respuesta.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, respuesta.StatusCode);
+        Assert.Contains("\"estado\":\"error\"", cuerpo, StringComparison.Ordinal);
+        Assert.DoesNotContain("127.0.0.1", cuerpo, StringComparison.Ordinal);
+        Assert.DoesNotContain("no-existe", cuerpo, StringComparison.Ordinal);
+        Assert.DoesNotContain("Password", cuerpo, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Los_endpoints_de_prueba_de_la_fase_A_ya_no_existen()
     {
         Assert.Equal(HttpStatusCode.NotFound, (await _cliente.GetAsync("/modelo?q=hola")).StatusCode);

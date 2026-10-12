@@ -101,6 +101,27 @@ app.MapGet("/health", () => Results.Ok(new
     horaUtc = DateTimeOffset.UtcNow
 }));
 
+// Diagnostico de la base: conecta y lee una tabla del esquema. Solo devuelve el tipo de error y el codigo SQL
+// (nunca el mensaje, que puede incluir host o usuario). 503 si falla.
+app.MapGet("/health/db", async (HotelDbContext db, CancellationToken ct) =>
+{
+    try
+    {
+        await db.Estancias.AsNoTracking().AnyAsync(ct);
+        return Results.Ok(new { estado = "ok" });
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+        return Results.Json(new
+        {
+            estado = "error",
+            tipo = ex.GetType().Name,
+            interno = ex.InnerException?.GetType().Name,
+            codigoSql = (ex as Npgsql.PostgresException ?? ex.InnerException as Npgsql.PostgresException)?.SqlState
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
+
 // Emision de tokens para pruebas y la demo: solo con DEV_TOKENS=true y solo para huespedes con estancia activa.
 // En produccion lo sustituye el login real del hotel.
 if (config.GetValue<bool>("DEV_TOKENS"))
