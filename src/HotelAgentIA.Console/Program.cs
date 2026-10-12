@@ -35,6 +35,8 @@ await PruebaHerramientas.EjecutarAsync();
 
 await PruebaProveedores.EjecutarAsync();
 
+await PruebaAlmacenPostgres.EjecutarAsync();
+
 await PruebaPreferencias.EjecutarAsync();
 
 await PruebaModeloReal.EjecutarAsync();

@@ -65,10 +65,10 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IRepositorioInfoHotel, RepositorioInfoHotel>();
 builder.Services.AddScoped<IServicioInfoHotel, ServicioInfoHotel>();
 
-// Provisional: el almacen en memoria pierde todo al reiniciar el proceso (pendiente: PostgreSQL)
-builder.Services.AddSingleton<IAlmacenMemoriaClaveValor, AlmacenMemoriaClaveValorEnMemoria>();
-builder.Services.AddSingleton<ServicioPreferencias>();
-builder.Services.AddSingleton<ServicioConversacion>();
+// Memoria durable en PostgreSQL; por ambito porque usa el DbContext de la peticion
+builder.Services.AddScoped<IAlmacenMemoriaClaveValor, AlmacenMemoriaClaveValorPostgres>();
+builder.Services.AddScoped<ServicioPreferencias>();
+builder.Services.AddScoped<ServicioConversacion>();
 
 builder.Services.AddSingleton<IChatClient>(_ => FabricaClienteChat.CrearDesdeEntorno()
     ?? throw new InvalidOperationException("Faltan AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY o AZURE_OPENAI_DEPLOYMENT."));

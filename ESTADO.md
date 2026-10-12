@@ -1,12 +1,12 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** C (API) en curso. Fases A y B cerradas. La API ya referencia Application e Infrastructure, con JWT, `/chat`, `/chat/stream` (SSE), CORS, límite de uso y OpenAPI, probada en local con el modelo real. Falta: memoria durable en PostgreSQL, publicar en el hosting y probar allí. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
+- **Fase actual:** C (API) en curso. Fases A y B cerradas. La API ya referencia Application e Infrastructure, con JWT, `/chat`, `/chat/stream` (SSE), CORS, límite de uso y OpenAPI, probada en local con el modelo real. Memoria durable en PostgreSQL hecha. Falta: publicar en el hosting y probar allí. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
 - **Fases cerradas:** 0, 1, 2 (del plan original, conservadas), A y B
 - **Última sesión:** 2026-10-12
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
 
 ## Para retomar (leer primero)
-- **Dónde nos quedamos (2026-10-12):** fase B cerrada (agente con modelo real, escritura de preferencias, instrucciones, menú por comida). Fase C empezada: `src/HotelAgentIA.Api` es ahora la API real (se eliminaron `/stream` y `/modelo` de la prueba de la fase A, que dejaban el modelo abierto sin autenticación; `/health` se queda). **Lo siguiente en C, en orden:** (1) implementación PostgreSQL de `IAlmacenMemoriaClaveValor` (hoy el almacén en memoria pierde todo al reiniciar y IIS recicla el pool; resolver también la carrera leer-modificar-escribir de `ServicioConversacion`); (2) añadir `JWT_SIGNING_KEY` (≥32 bytes), `POSTGRES_CONNECTION` y `DEV_TOKENS=true` al `.env` y a las variables del pool del hosting, republicar y probar allí; (3) logs sin datos sensibles revisados y checkout que borre la memoria del huésped; (4) pruebas de la API en un proyecto de tests. Fase A: la API de prueba sigue publicada en https://davidroblero-001-site2.ftempurl.com/ con el código antiguo hasta republicar
+- **Dónde nos quedamos (2026-10-12):** fase B cerrada (agente con modelo real, escritura de preferencias, instrucciones, menú por comida). Fase C empezada: `src/HotelAgentIA.Api` es ahora la API real (se eliminaron `/stream` y `/modelo` de la prueba de la fase A, que dejaban el modelo abierto sin autenticación; `/health` se queda). **Lo siguiente en C, en orden:** (1) HECHO: `AlmacenMemoriaClaveValorPostgres` (tabla `memoria_clave_valor`, migración `MemoriaClaveValor`) y `ActualizarAsync` atómico en el contrato; (2) añadir `JWT_SIGNING_KEY` (≥32 bytes), `POSTGRES_CONNECTION` y `DEV_TOKENS=true` al `.env` y a las variables del pool del hosting, republicar y probar allí; (3) logs sin datos sensibles revisados y checkout que borre la memoria del huésped; (4) pruebas de la API en un proyecto de tests. Fase A: la API de prueba sigue publicada en https://davidroblero-001-site2.ftempurl.com/ con el código antiguo hasta republicar
 - **Causa del 500 inicial (resuelta 2026-10-12):** el sitio iba en InProcess y el pool solo admite una app InProcess (otro sitio la ocupaba; error 500.35). Se corrige con `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en el `.csproj` de la Api, para que el `web.config` publicado ya lleve `outofprocess`. Hasta republicar, el `web.config` del servidor tiene el arreglo a mano. Las variables de entorno son por pool y el proceso las lee sin configuración en el proyecto
 - **Pasos siguientes, en orden:**
   1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
@@ -120,11 +120,14 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 
 - Fase C: el huésped sale del claim `sub` del JWT (`MapInboundClaims = false`); probado que el 305 no puede ver datos del 412. `AsistenteHotel` se registra por ámbito (usa el DbContext), no como singleton. El filtro de contenido de Azure se traduce a 422 y otros fallos del modelo a 502, registrando solo el tipo de error, nunca el mensaje. En SSE, si el error ocurre tras empezar, viaja como evento `error`. Los `curl` desde la consola de Windows mandan CP1252: para probar con tildes usar `--data-binary @archivo` en UTF-8. `launchSettings.json` pisa `ASPNETCORE_URLS` en local (puertos 55001/55002)
 
+- Fase C: `IAlmacenMemoriaClaveValor.ActualizarAsync(clave, Func<string?, string>)` hace la lectura-modificación-escritura atómica; en PostgreSQL con `pg_advisory_xact_lock(hashtextextended(clave, 0))` dentro de una transacción, que bloquea incluso si la fila aún no existe y vale entre instancias de la API. `ServicioConversacion` lo usa: 15 turnos simultáneos del mismo huésped no se pierden y los de más de 20 se recortan. Almacén, servicios y `AsistenteHotel` van por ámbito (comparten el DbContext de la petición). `EliminarPorPrefijoAsync` usa `StartsWith`, que EF traduce a `LIKE` escapando `%` y `_` (probado con `pruebaa` frente a `prueba_`). Probado de extremo a extremo: el agente recuerda nombre y hora de desayuno tras reiniciar el proceso de la API, y otro huésped no lo ve
+- Fase C: los datos de prueba de la API en tu base local (huésped 305) se quedan guardados; para limpiarlos, `EliminarPorPrefijoAsync(ClavesMemoria.PrefijoHuesped("305"))`
+
 ## Limitaciones conocidas
-- Fase C: la memoria de conversación y preferencias sigue en el almacén en memoria; se pierde al reiniciar
 - `/dev/token` es provisional: en producción lo sustituye el login real del hotel (Pregunta abierta: cómo se autentica el huésped)
-- `ServicioConversacion` hace leer-modificar-escribir sobre una sola clave: dos mensajes simultáneos del mismo huésped podrían pisarse. Revisar al pasar a PostgreSQL
-- El almacén en memoria pierde todo al reiniciar (se resuelve con PostgreSQL)
+- El almacén en memoria (`AlmacenMemoriaClaveValorEnMemoria`) solo sirve para el banco de pruebas: pierde todo al reiniciar. La API usa PostgreSQL
+- Nada borra aún la memoria de un huésped al hacer checkout en la API (`EliminarPorPrefijoAsync` existe y está probado, falta el disparador: el hotel/PMS necesita una credencial de servicio distinta del token del huésped)
+- `ActualizarAsync` en el almacén en memoria usa `AddOrUpdate`, que puede reintentar la función bajo contienda; solo importa en pruebas
 
 ## Experimento pendiente (fase 1, opcional)
 - Añadir `using HotelAgentIA.Application;` dentro de un archivo de Domain, compilar y anotar el error; luego quitarlo

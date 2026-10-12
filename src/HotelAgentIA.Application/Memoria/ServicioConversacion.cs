@@ -8,8 +8,8 @@ namespace HotelAgentIA.Application.Memoria;
 /// Guarda el hilo reciente de la conversación de cada huésped.
 /// Todos los turnos de un huésped viven en UNA clave, como lista JSON, porque el
 /// contrato del almacén no permite listar claves por prefijo.
-/// Limitación conocida: leer-modificar-escribir no es atómico; dos mensajes
-/// simultáneos del mismo huésped podrían pisarse.
+/// La lectura-modificación-escritura es atómica (IAlmacenMemoriaClaveValor.ActualizarAsync), así
+/// que dos mensajes simultáneos del mismo huésped no se pisan.
 /// </summary>
 public sealed class ServicioConversacion
 {
@@ -33,16 +33,19 @@ public sealed class ServicioConversacion
         ArgumentNullException.ThrowIfNull(turno);
 
         var clave = ClavesMemoria.Conversacion(turno.HuespedId);
-        var turnos = await LeerAsync(clave, ct);
 
-        turnos.Add(turno);
-
-        if (turnos.Count > MaximoTurnosGuardados)
+        await _almacen.ActualizarAsync(clave, json =>
         {
-            turnos.RemoveRange(0, turnos.Count - MaximoTurnosGuardados);
-        }
+            var turnos = Deserializar(json);
+            turnos.Add(turno);
 
-        await _almacen.GuardarAsync(clave, JsonSerializer.Serialize(turnos, OpcionesJson), ct);
+            if (turnos.Count > MaximoTurnosGuardados)
+            {
+                turnos.RemoveRange(0, turnos.Count - MaximoTurnosGuardados);
+            }
+
+            return JsonSerializer.Serialize(turnos, OpcionesJson);
+        }, ct);
     }
 
     // Devuelve los últimos "maximo" turnos, del más antiguo al más reciente.
@@ -58,15 +61,9 @@ public sealed class ServicioConversacion
             : turnos.GetRange(turnos.Count - maximo, maximo);
     }
 
-    private async Task<List<TurnoConversacion>> LeerAsync(string clave, CancellationToken ct)
-    {
-        var json = await _almacen.ObtenerAsync(clave, ct);
+    private async Task<List<TurnoConversacion>> LeerAsync(string clave, CancellationToken ct) =>
+        Deserializar(await _almacen.ObtenerAsync(clave, ct));
 
-        if (json is null)
-        {
-            return [];
-        }
-
-        return JsonSerializer.Deserialize<List<TurnoConversacion>>(json, OpcionesJson) ?? [];
-    }
+    private static List<TurnoConversacion> Deserializar(string? json) =>
+        json is null ? [] : JsonSerializer.Deserialize<List<TurnoConversacion>>(json, OpcionesJson) ?? [];
 }

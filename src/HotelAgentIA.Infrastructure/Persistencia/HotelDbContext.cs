@@ -11,6 +11,7 @@ public class HotelDbContext(DbContextOptions<HotelDbContext> opciones) : DbConte
     public DbSet<ActividadEntidad> Actividades => Set<ActividadEntidad>();
     public DbSet<HuespedEntidad> Huespedes => Set<HuespedEntidad>();
     public DbSet<EstanciaEntidad> Estancias => Set<EstanciaEntidad>();
+    public DbSet<MemoriaClaveValorEntidad> Memoria => Set<MemoriaClaveValorEntidad>();
 
     protected override void OnModelCreating(ModelBuilder modelo)
     {
@@ -60,6 +61,13 @@ public class HotelDbContext(DbContextOptions<HotelDbContext> opciones) : DbConte
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasMaxLength(50);
             e.Property(x => x.Nombre).HasMaxLength(200);
+        });
+
+        modelo.Entity<MemoriaClaveValorEntidad>(e =>
+        {
+            e.ToTable("memoria_clave_valor");
+            e.HasKey(x => x.Clave);
+            e.Property(x => x.Clave).HasMaxLength(300);
         });
 
         modelo.Entity<EstanciaEntidad>(e =>

@@ -132,6 +132,24 @@ namespace HotelAgentIA.Infrastructure.Persistencia.Migraciones
                     b.ToTable("huespedes", (string)null);
                 });
 
+            modelBuilder.Entity("HotelAgentIA.Infrastructure.Persistencia.Entidades.MemoriaClaveValorEntidad", b =>
+                {
+                    b.Property<string>("Clave")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Valor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Clave");
+
+                    b.ToTable("memoria_clave_valor", (string)null);
+                });
+
             modelBuilder.Entity("HotelAgentIA.Infrastructure.Persistencia.Entidades.PlatoMenuEntidad", b =>
                 {
                     b.Property<string>("Id")

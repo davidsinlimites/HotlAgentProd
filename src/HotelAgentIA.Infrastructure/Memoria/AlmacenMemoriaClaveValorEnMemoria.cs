@@ -17,6 +17,13 @@ public sealed class AlmacenMemoriaClaveValorEnMemoria : IAlmacenMemoriaClaveValo
         _datos[clave] = valor;
         return Task.CompletedTask;
     }
+    public Task ActualizarAsync(string clave, Func<string?, string> actualizar, CancellationToken ct = default)
+    {
+        // AddOrUpdate puede reintentar la funcion si hay contienda; es aceptable para el banco de pruebas
+        _datos.AddOrUpdate(clave, _ => actualizar(null), (_, actual) => actualizar(actual));
+        return Task.CompletedTask;
+    }
+
     public Task EliminarAsync(string clave, CancellationToken ct = default) 
     { 
         _datos.TryRemove(clave, out _);
