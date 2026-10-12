@@ -6,7 +6,7 @@ El proyecto es un ejercicio de aprendizaje (plan de 35 fases, Semantic Kernel pr
 Decisiones tomadas en esta sesión:
 - Ruta corta: se omiten el Bloque 1 de SK (fases 3-10 en su forma SK) y el Bloque 3 (migración).
 - Web: React + TypeScript; móvil: React Native; cliente TypeScript compartido, generado desde OpenAPI.
-- Datos: PostgreSQL (con pgvector si hace falta búsqueda semántica), reemplaza a MySQL.
+- Datos: PostgreSQL, reemplaza a MySQL. Vectores en una base aparte con pgvector (el PostgreSQL de SmarterASP no lo tiene, comprobado 2026-10-12).
 - Hosting API: verificar SmarterASP primero, con plan B en Azure.
 
 ## Qué se conserva del código actual
@@ -22,7 +22,7 @@ Cambios en decisiones: MySQL → PostgreSQL; fase de SK eliminada; `ESTADO.md` y
 
 **A. Validación (antes de escribir más código)** — *en curso; hallazgos en `docs/FASE-A-VALIDACION.md`*
 1. ✅ Documentación oficial verificada: Agent Framework va por 1.24 estable (no 1.0), soporte .NET 10, `AIAgent`, `AgentSession`, `ChatHistoryProvider`, `AgentSessionStore`. Pendiente: `AIContextProvider`, pasar el huésped a una herramienta, `RunStreamingAsync`.
-2. ◐ SmarterASP: confirmado en su web .NET 10, PostgreSQL, MySQL y WebSockets en todos los planes (cron solo en Premium). Falta probar en la prueba de 60 días con la API de prueba (`src/HotelAgentIA.Api`: `/stream`, `/modelo`): SSE sin buffering, memoria del pool (256-512 MB), salida al modelo y `pgvector`. Si falla alguna, plan B: Azure App Service.
+2. ◐ SmarterASP: confirmado en su web .NET 10, PostgreSQL, MySQL y WebSockets en todos los planes (cron solo en Premium). Falta probar en la prueba de 60 días con la API de prueba (`src/HotelAgentIA.Api`: `/stream`, `/modelo`): SSE sin buffering, memoria del pool (256-512 MB), y salida al modelo. `pgvector` no está disponible en SmarterASP: los vectores irán en otra base. Si falla alguna, plan B: Azure App Service.
    - La API de prueba ya existe y compila; `/health` y `/stream` probados en local. `/modelo` probado en local (200 contra el modelo).
    - Sin identidad administrada fuera de Azure: acceso al modelo con clave de API en variables de entorno.
 3. Decidir hosting de PostgreSQL (SmarterASP o gestionado, p. ej. Azure Database for PostgreSQL).

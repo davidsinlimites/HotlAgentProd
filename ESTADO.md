@@ -11,7 +11,8 @@
 - **Pasos siguientes, en orden:**
   1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
   2. Empezar la fase B: PostgreSQL con EF Core (Npgsql) en Infrastructure, herramientas de solo lectura y agente con `IChatClient` de prueba (modo offline)
-  3. Al empezar la fase B, comprobar `pgvector` en el PostgreSQL de SmarterASP y medir la memoria del pool con el agente completo; con eso se cierra la decisión de hosting (SmarterASP Advance/Premium o plan B Azure App Service)
+  3. Medir la memoria del pool con el agente completo para cerrar la decisión de hosting (SmarterASP Advance/Premium o plan B Azure App Service)
+  4. Elegir la base de datos con `pgvector` para los vectores (`pgvector` no está en el PostgreSQL de SmarterASP, comprobado 2026-10-12); candidata: Azure Database for PostgreSQL Flexible
 - **Si el usuario mueve la carpeta del proyecto:** el `.env` está ignorado por git, así que hay que copiarlo a mano a la raíz nueva (con las tres variables, cada una una sola vez). `.git` y `.claudeignore` viajan con la carpeta. Claude no lee `.env`; solo comprueba su estructura contando caracteres
 - **No hay que subir al repositorio:** el archivo de publicación de SmarterASP (contiene credenciales). Ya está en el `.gitignore` (`*.publishsettings`)
 - **Visual Studio:** compilar .NET 10 exige una versión reciente; si no la soporta, `dotnet publish -c Release` sobre `src/HotelAgentIA.Api` y subir la carpeta
@@ -25,7 +26,9 @@ Se pasa de ruta de aprendizaje (35 fases, Semantic Kernel primero) a **ruta cort
 - Claude entrega las clases completas cuando el usuario lo pide
 
 ## Decisiones vigentes
-- PostgreSQL (Npgsql/EF Core; pgvector si hace falta búsqueda semántica) para datos y memoria, sustituye a MySQL; Blob Storage para archivos
+- PostgreSQL (Npgsql/EF Core) para datos y memoria, sustituye a MySQL; Blob Storage para archivos
+- Hosting y costos: es un proyecto piloto para mostrar funcionalidad y potencial. Cuando llegue el momento se decide entre quedarse en SmarterASP (con una base aparte para vectores) o mover todo a Azure; depende de los costos y se evalúan ambos escenarios
+- Vectores: sí se usarán (decisión del usuario, 2026-10-12) en una base PostgreSQL aparte con `pgvector`, porque el de SmarterASP no lo tiene. `IMemoriaVectorial` se implementa en Infrastructure con su propia cadena de conexión
 - Agent Framework directo, sin Semantic Kernel (`Microsoft.Agents.AI` 1.24.0 estable; paquetes de hosting en prerelease, versiones fijadas); el modelo va en Azure OpenAI/Foundry
 - Acceso al modelo por clave de API con variables `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`: en local desde `.env`, en el hosting desde variables de entorno (la identidad administrada solo existe dentro de Azure). `.env` lo ignoran `.gitignore` y `.claudeignore`; nunca se sube ni lo lee Claude
 - Frontend: monorepo `frontend/` con pnpm; web Vite + React + TypeScript + Tailwind; móvil Expo (React Native); Zustand + TanStack Query; cliente generado desde OpenAPI. Sin Next.js ni Express; solo librerías gratuitas
@@ -109,7 +112,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Conservar preferencias para que el hotel decida: guardar solo estadísticas agregadas y anónimas en tablas aparte, y borrar lo individual en el checkout. Requiere consentimiento del huésped y revisar la normativa de privacidad aplicable
 
 ## Siguiente: fase A (Validación) y luego B (Núcleo)
-- Fase A, pendiente: publicar la API en la prueba de 60 días de SmarterASP y repetir `/stream` y `/modelo` allí; decidir hosting (ver `docs/FASE-A-VALIDACION.md`). Sin verificar aún: `AIContextProvider` en .NET, cómo pasar el huésped a una herramienta, `RunStreamingAsync`, `pgvector` en el PostgreSQL de SmarterASP
+- Fase A, pendiente: publicar la API en la prueba de 60 días de SmarterASP y repetir `/stream` y `/modelo` allí; decidir hosting (ver `docs/FASE-A-VALIDACION.md`). Sin verificar aún: `AIContextProvider` en .NET, cómo pasar el huésped a una herramienta, `RunStreamingAsync`
 - Fase B incluye `ExtractorPreferencias` (antes fase 3), datos en PostgreSQL, herramientas y agente
 
 ### Detalle heredado de la fase 3

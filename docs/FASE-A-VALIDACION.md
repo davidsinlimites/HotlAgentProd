@@ -83,8 +83,17 @@ Sitio de prueba: https://davidroblero-001-site2.ftempurl.com/ (prueba de 60 día
 | `/stream`: ¿llegan los eventos uno a uno? | Sí: 5 eventos con ~1 s entre cada uno, sin buffering (con OutOfProcess, IIS hace de proxy hacia Kestrel) |
 | `/modelo`: ¿responde 200 con las variables del pool? | Sí: 200 y `{"respuesta":"OK"}` |
 | Memoria del pool con el plan elegido | Pendiente: medir bajo carga con el agente completo |
-| `pgvector` disponible en PostgreSQL | Pendiente: se prueba al empezar la fase B |
-| Decisión de hosting | SmarterASP sigue siendo viable (SSE, salida al modelo y .NET 10 confirmados). Se cierra tras medir memoria y `pgvector`; plan B: Azure App Service |
+| `pgvector` disponible en PostgreSQL | **No** (2026-10-12): `pg_available_extensions` no lista `vector` y `CREATE EXTENSION vector` da "extension "vector" is not available". En hosting compartido no se puede instalar |
+| Decisión de hosting | SmarterASP sigue siendo viable (SSE, salida al modelo y .NET 10 confirmados). Se cierra tras medir la memoria del pool; plan B: Azure App Service. Los vectores van en una base aparte (ver abajo) |
+
+### Decisión sobre vectores (2026-10-12)
+- El usuario quiere búsqueda vectorial en el agente (embeddings para texto libre: políticas, preguntas frecuentes), no omitirla del MVP.
+- El PostgreSQL de SmarterASP no tiene `pgvector`, así que los vectores irán en una **base de datos aparte con `pgvector`**; los datos normales del hotel y la memoria siguen en el PostgreSQL de SmarterASP.
+- Candidatas por evaluar en la fase B: Azure Database for PostgreSQL Flexible (soporta `pgvector`, encaja con el plan B de Azure) u otro PostgreSQL gestionado con la extensión. Criterios: coste, latencia desde SmarterASP, y conexión por red permitida desde el hosting.
+- Impacto en el diseño: `IMemoriaVectorial` (Domain) ya es un contrato, así que la implementación vectorial se enchufa en Infrastructure con su propia cadena de conexión sin tocar Domain ni Application. El aislamiento por `huespedId` se mantiene.
+
+### Decisión de hosting pendiente
+El proyecto es un piloto para mostrar funcionalidad y potencial. Cuando llegue el momento se evaluará quedarse en SmarterASP (con una base aparte para vectores) o mover todo a Azure; la decisión depende de los costos.
 
 ### Causa del HTTP 500 inicial
 - El sitio se publicó con el modelo de hospedaje **InProcess**. El pool solo admite **una app InProcess**, y otro sitio ya la ocupaba: el módulo de IIS falla al arrancar (error 500.35) y devuelve 500 con cuerpo vacío en todas las rutas, incluida la DLL.
