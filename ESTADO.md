@@ -1,18 +1,17 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** A (Validación): API de prueba lista y probada en local; falta publicarla en SmarterASP y decidir hosting. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
-- **Fases cerradas:** 0, 1, 2 (del plan original, conservadas)
-- **Última sesión:** 2026-10-09
+- **Fase actual:** A (Validación) cerrada con la API de prueba funcionando en SmarterASP; siguiente: fase B (Núcleo). Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
+- **Fases cerradas:** 0, 1, 2 (del plan original, conservadas) y A
+- **Última sesión:** 2026-10-12
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
 
 ## Para retomar (leer primero)
-- **Dónde nos quedamos:** fase A. La API de prueba (`src/HotelAgentIA.Api`) compila y `/health`, `/stream` y `/modelo` funcionan en local (`/modelo` responde 200 contra el modelo). Último commit subido: `a216b16`. Falta publicarla en la prueba de 60 días de SmarterASP y probar allí
+- **Dónde nos quedamos:** fase A cerrada. La API de prueba (`src/HotelAgentIA.Api`) está publicada en https://davidroblero-001-site2.ftempurl.com/ y en el hosting `/health` (.NET 10.0.7, 48 MB), `/stream` (un evento por segundo, sin buffering) y `/modelo` (200 contra el modelo) funcionan. Resultados en `docs/FASE-A-VALIDACION.md`, sección 6
+- **Causa del 500 inicial (resuelta 2026-10-12):** el sitio iba en InProcess y el pool solo admite una app InProcess (otro sitio la ocupaba; error 500.35). Se corrige con `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en el `.csproj` de la Api, para que el `web.config` publicado ya lleve `outofprocess`. Hasta republicar, el `web.config` del servidor tiene el arreglo a mano. Las variables de entorno son por pool y el proceso las lee sin configuración en el proyecto
 - **Pasos siguientes, en orden:**
-  1. El usuario crea el perfil de publicación en Visual Studio (clic derecho en `HotelAgentIA.Api` → Publicar, importando el archivo de Web Deploy descargado de SmarterASP) y publica solo ese proyecto
-  2. En el panel de SmarterASP: Control panel → Advance → Pool Manager → Actions → Environment Variables; crear `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` y `AZURE_OPENAI_DEPLOYMENT` (el `.env` no se publica a propósito)
-  3. Probar en el hosting `/health` (versión de .NET y memoria), `/stream` (los eventos deben llegar uno por segundo, no todos juntos) y `/modelo`
-  4. Anotar los resultados en `docs/FASE-A-VALIDACION.md` y decidir el hosting: SmarterASP (Advance o Premium) o plan B Azure App Service
-  5. Cerrar la fase A con un commit y empezar la fase B (PostgreSQL con EF Core, herramientas, agente con `IChatClient` de prueba)
+  1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
+  2. Empezar la fase B: PostgreSQL con EF Core (Npgsql) en Infrastructure, herramientas de solo lectura y agente con `IChatClient` de prueba (modo offline)
+  3. Al empezar la fase B, comprobar `pgvector` en el PostgreSQL de SmarterASP y medir la memoria del pool con el agente completo; con eso se cierra la decisión de hosting (SmarterASP Advance/Premium o plan B Azure App Service)
 - **Si el usuario mueve la carpeta del proyecto:** el `.env` está ignorado por git, así que hay que copiarlo a mano a la raíz nueva (con las tres variables, cada una una sola vez). `.git` y `.claudeignore` viajan con la carpeta. Claude no lee `.env`; solo comprueba su estructura contando caracteres
 - **No hay que subir al repositorio:** el archivo de publicación de SmarterASP (contiene credenciales). Ya está en el `.gitignore` (`*.publishsettings`)
 - **Visual Studio:** compilar .NET 10 exige una versión reciente; si no la soporta, `dotnet publish -c Release` sobre `src/HotelAgentIA.Api` y subir la carpeta
@@ -91,6 +90,8 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Fase A: con `NoClobber`, una clave repetida en `.env` con valor vacío gana a la siguiente; cada variable debe aparecer una sola vez
 - Fase A: Visual Studio publica un solo proyecto (el del perfil), solo con lo que pertenece a su carpeta; por eso el `.env` de la raíz de la solución no se sube. Las variables del hosting se ponen en el panel (Pool Manager → Environment Variables, a nivel de pool) y no en el `web.config`, que Visual Studio puede regenerar al publicar
 - Fase A: ASP.NET Core no lee `.env` por sí solo; se usa DotNetEnv, y las variables de entorno reales tienen prioridad
+- Fase A: en un pool compartido con varios sitios .NET solo uno puede ir InProcess; los demás deben ir OutOfProcess (`<AspNetCoreHostingModel>` en el `.csproj`, no a mano en el `web.config`, que se regenera al publicar). Un 500 vacío en todas las rutas, DLL incluida, es fallo de arranque (500.35), no del código
+- Fase A: las variables de entorno del pool son por pool y el proceso las lee sin configurar nada en el proyecto; con OutOfProcess `/stream` llega sin buffering a través del proxy de IIS
 
 ## Limitaciones conocidas
 - `ServicioConversacion` hace leer-modificar-escribir sobre una sola clave: dos mensajes simultáneos del mismo huésped podrían pisarse. Revisar al pasar a PostgreSQL

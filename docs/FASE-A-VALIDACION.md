@@ -73,13 +73,26 @@ Prueba gratuita de 60 días disponible (pool de 800 MB).
 - Variables en el hosting: Control panel → Advance → Pool Manager → Actions → Environment Variables ([guía](https://www.smarterasp.net/support/kb/a2156/how-to-set-environment-variable-for-your-account.aspx)). Se aplican a todo el pool. La alternativa `web.config` ([guía](https://www.smarterasp.net/support/kb/a1869/how-to-config-aspnetcore-environment-for-asp_net-core-application.aspx)) se descarta: puede regenerarse al publicar y deja la clave en un archivo de texto. Las guías son antiguas; confirmar en el panel actual.
 - El archivo de publicación contiene credenciales: no va al repositorio.
 
-## 6. Resultados en el hosting (pendiente de rellenar)
+## 6. Resultados en el hosting (2026-10-12)
+
+Sitio de prueba: https://davidroblero-001-site2.ftempurl.com/ (prueba de 60 días, pool compartido con otros 3 sitios .NET).
 
 | Prueba | Resultado |
 |---|---|
-| `/health`: versión de .NET y memoria | |
-| `/stream`: ¿llegan los eventos uno a uno? | |
-| `/modelo`: ¿responde 200 con las variables del pool? | |
-| Memoria del pool con el plan elegido | |
-| `pgvector` disponible en PostgreSQL | |
-| Decisión de hosting | |
+| `/health`: versión de .NET y memoria | 200; .NET 10.0.7; 48 MB en reposo |
+| `/stream`: ¿llegan los eventos uno a uno? | Sí: 5 eventos con ~1 s entre cada uno, sin buffering (con OutOfProcess, IIS hace de proxy hacia Kestrel) |
+| `/modelo`: ¿responde 200 con las variables del pool? | Sí: 200 y `{"respuesta":"OK"}` |
+| Memoria del pool con el plan elegido | Pendiente: medir bajo carga con el agente completo |
+| `pgvector` disponible en PostgreSQL | Pendiente: se prueba al empezar la fase B |
+| Decisión de hosting | SmarterASP sigue siendo viable (SSE, salida al modelo y .NET 10 confirmados). Se cierra tras medir memoria y `pgvector`; plan B: Azure App Service |
+
+### Causa del HTTP 500 inicial
+- El sitio se publicó con el modelo de hospedaje **InProcess**. El pool solo admite **una app InProcess**, y otro sitio ya la ocupaba: el módulo de IIS falla al arrancar (error 500.35) y devuelve 500 con cuerpo vacío en todas las rutas, incluida la DLL.
+- Al corregirlo a mano en el `web.config` del servidor se escribió mal el valor (`outprocess`); con `outofprocess` arrancó.
+- No eran la versión de .NET, Server GC, los archivos ni las variables de entorno.
+- Solución permanente: `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en `HotelAgentIA.Api.csproj`, para que el `web.config` generado al publicar ya lleve `outofprocess` y no se pierda el arreglo.
+
+### Lecciones
+- En un pool compartido con varios sitios .NET, todos deben ir en OutOfProcess salvo uno.
+- Un 500 vacío en todas las rutas, DLL incluida, indica fallo al arrancar el proceso, no un error del código. El log de arranque está en `logs\stdout_*.log` con `stdoutLogEnabled="true"`.
+- Las variables de entorno del pool las lee el proceso sin configuración en el proyecto; son por pool, no por sitio.
