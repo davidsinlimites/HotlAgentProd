@@ -1,6 +1,6 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** A (Validación) cerrada con la API de prueba funcionando en SmarterASP; siguiente: fase B (Núcleo). Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
+- **Fase actual:** B (Núcleo) en curso: modo offline y datos del hotel en PostgreSQL hechos; siguen herramientas y agente. Fase A cerrada. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
 - **Fases cerradas:** 0, 1, 2 (del plan original, conservadas) y A
 - **Última sesión:** 2026-10-12
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
@@ -10,7 +10,7 @@
 - **Causa del 500 inicial (resuelta 2026-10-12):** el sitio iba en InProcess y el pool solo admite una app InProcess (otro sitio la ocupaba; error 500.35). Se corrige con `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en el `.csproj` de la Api, para que el `web.config` publicado ya lleve `outofprocess`. Hasta republicar, el `web.config` del servidor tiene el arreglo a mano. Las variables de entorno son por pool y el proceso las lee sin configuración en el proyecto
 - **Pasos siguientes, en orden:**
   1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
-  2. Empezar la fase B: PostgreSQL con EF Core (Npgsql) en Infrastructure, herramientas de solo lectura y agente con `IChatClient` de prueba (modo offline)
+  2. Fase B, hecho: `ClienteChatFalso` (modo offline) y datos del hotel con EF Core. Falta: `IHotelInfoService` y herramientas de solo lectura (verificar antes en la documentación cómo pasar el huésped a una herramienta), agente con `ChatHistoryProvider` propio y `ExtractorPreferencias`
   3. Medir la memoria del pool con el agente completo para cerrar la decisión de hosting (SmarterASP Advance/Premium o plan B Azure App Service)
   4. Elegir la base de datos con `pgvector` para los vectores (`pgvector` no está en el PostgreSQL de SmarterASP, comprobado 2026-10-12); candidata: Azure Database for PostgreSQL Flexible
 - **Si el usuario mueve la carpeta del proyecto:** el `.env` está ignorado por git, así que hay que copiarlo a mano a la raíz nueva (con las tres variables, cada una una sola vez). `.git` y `.claudeignore` viajan con la carpeta. Claude no lee `.env`; solo comprueba su estructura contando caracteres
@@ -70,6 +70,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Infrastructure (fase 2), carpeta `Memoria/`: `AlmacenMemoriaClaveValorEnMemoria` (`ConcurrentDictionary`; expone `Claves` solo para el banco de pruebas)
 - `HotelAgentIA.Console` referencia Application e Infrastructure; `Program.cs` ejecuta el escenario de dos huéspedes (305 y 412), con checkout del 305
 - `HotelAgentIA.Api` (fase A, prueba de concepto, no referencia aún a las demás capas): `Program.cs` con `GET /health`, `GET /stream?eventos=N` (SSE, un evento por segundo) y `GET /modelo?q=` (`OpenAIClient` con `Endpoint = <host>/openai/v1/` y la clave, `.GetChatClient(despliegue).AsAIAgent(...)`; 503 si faltan variables). Carga `.env` con DotNetEnv (`NoClobber().TraversePath()`). Paquetes: `Microsoft.Agents.AI.OpenAI` 1.24.0 y `DotNetEnv` 3.2.0. Compila sin advertencias; `/health`, `/stream` y `/modelo` probados en local (`/modelo` responde 200 contra el modelo)
+- Infrastructure (fase B), `Chat/` y `Persistencia/`: `ClienteChatFalso`, `HotelDbContext`, entidades, migración `Inicial`, `RepositorioInfoHotel`, `SemillaDatos`, `FabricaHotelDbContext`. La consola corre `PruebaAgenteOffline` y `PruebaBaseDatos` (migra, siembra y lee de Docker)
 - `HotelAgent.slnx` referencia los 5 proyectos
 - `docs/FASE-A-VALIDACION.md`: hallazgos de la validación (versiones, API verificada, límites de SmarterASP)
 
@@ -95,6 +96,10 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Fase A: ASP.NET Core no lee `.env` por sí solo; se usa DotNetEnv, y las variables de entorno reales tienen prioridad
 - Fase A: en un pool compartido con varios sitios .NET solo uno puede ir InProcess; los demás deben ir OutOfProcess (`<AspNetCoreHostingModel>` en el `.csproj`, no a mano en el `web.config`, que se regenera al publicar). Un 500 vacío en todas las rutas, DLL incluida, es fallo de arranque (500.35), no del código
 - Fase A: las variables de entorno del pool son por pool y el proceso las lee sin configurar nada en el proyecto; con OutOfProcess `/stream` llega sin buffering a través del proxy de IIS
+
+- Fase B: `ClienteChatFalso` (Infrastructure/Chat) permite probar el agente sin red; `AsAIAgent` sobre `IChatClient` está en el namespace `Microsoft.Extensions.AI`, y la sesión acumula el historial entre turnos
+- Fase B: Npgsql arrastra EF Core 10.0.4 y Design trae 10.0.12 (aviso MSB3277): se fijan EF Core y Relational a 10.0.12 en Infrastructure; los tres se actualizan juntos. Npgsql exige `DateTimeOffset` en UTC
+- Fase B: las entidades de EF viven en Infrastructure (`Persistencia/Entidades`), separadas de los `record` de Domain; `RepositorioInfoHotel` hace el mapeo. `FabricaHotelDbContext` (lee `POSTGRES_CONNECTION` del `.env`) permite `dotnet ef`; la consola es el proyecto de arranque
 
 ## Limitaciones conocidas
 - `ServicioConversacion` hace leer-modificar-escribir sobre una sola clave: dos mensajes simultáneos del mismo huésped podrían pisarse. Revisar al pasar a PostgreSQL
@@ -126,3 +131,5 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Compilar: `dotnet build HotelAgent.slnx`
 - Consola: `dotnet run --project src/HotelAgentIA.Console`
 - API de prueba: `dotnet run --project src/HotelAgentIA.Api` (necesita `.env` en la raíz para `/modelo`)
+- PostgreSQL local: contenedor Docker `hotelagent-pg` (`docker start hotelagent-pg`); `POSTGRES_CONNECTION` en el `.env`
+- Nueva migración: `dotnet ef migrations add <Nombre> --project src/HotelAgentIA.Infrastructure --startup-project src/HotelAgentIA.Console --output-dir Persistencia/Migraciones`

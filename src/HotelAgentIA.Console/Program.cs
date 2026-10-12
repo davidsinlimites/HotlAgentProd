@@ -29,6 +29,8 @@ await MostrarEstadoAsync("Tras el checkout del 305");
 
 await PruebaAgenteOffline.EjecutarAsync();
 
+await PruebaBaseDatos.EjecutarAsync();
+
 async Task MostrarEstadoAsync(string titulo)
 {
     Console.WriteLine($"=== {titulo} ===");
