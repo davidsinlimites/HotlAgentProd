@@ -27,7 +27,7 @@ El plan Word decía "Agent Framework 1.0 estable desde abril de 2026": se ha sup
 
 **No verificado todavía (revisar al construir la fase B)**
 - Nombre exacto de `AIContextProvider` y sus métodos en .NET (la página de memoria devolvió 404).
-- Cómo pasar contexto de ejecución (guestId) a una herramienta en .NET. En Python existe `FunctionInvocationContext`; en .NET no lo confirmé. Plan: crear las herramientas como closures o métodos de una clase con el guestId ya resuelto del token, construidas por petición (el modelo nunca lo ve).
+- ~~Cómo pasar contexto de ejecución (guestId) a una herramienta en .NET~~ **Verificado (2026-10-12)** en la documentación (function-tools y runtime-context): .NET ofrece `AgentRunOptions.AdditionalProperties` + `AIAgent.CurrentRunContext` (RunOptions y Session) y middleware de invocación que escribe en `context.Arguments`, y `AgentSession.StateBag`. Se descartó el middleware porque el parámetro de huésped quedaría visible al modelo; se usa una clase de herramientas construida por petición con el huésped del token y pasada en `ChatClientAgentRunOptions`. Probado con el cliente falso.
 - `RunStreamingAsync` y su forma para SSE.
 - Modelo disponible en nuestro proyecto de Foundry (la documentación usa `gpt-5.4-mini` en ejemplos).
 

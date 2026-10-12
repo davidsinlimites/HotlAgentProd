@@ -31,6 +31,8 @@ await PruebaAgenteOffline.EjecutarAsync();
 
 await PruebaBaseDatos.EjecutarAsync();
 
+await PruebaHerramientas.EjecutarAsync();
+
 async Task MostrarEstadoAsync(string titulo)
 {
     Console.WriteLine($"=== {titulo} ===");

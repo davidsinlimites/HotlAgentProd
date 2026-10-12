@@ -10,7 +10,7 @@
 - **Causa del 500 inicial (resuelta 2026-10-12):** el sitio iba en InProcess y el pool solo admite una app InProcess (otro sitio la ocupaba; error 500.35). Se corrige con `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en el `.csproj` de la Api, para que el `web.config` publicado ya lleve `outofprocess`. Hasta republicar, el `web.config` del servidor tiene el arreglo a mano. Las variables de entorno son por pool y el proceso las lee sin configuración en el proyecto
 - **Pasos siguientes, en orden:**
   1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
-  2. Fase B, hecho: `ClienteChatFalso` (modo offline) y datos del hotel con EF Core. Falta: `IHotelInfoService` y herramientas de solo lectura (verificar antes en la documentación cómo pasar el huésped a una herramienta), agente con `ChatHistoryProvider` propio y `ExtractorPreferencias`
+  2. Fase B, hecho: `ClienteChatFalso` (modo offline) y datos del hotel con EF Core. Herramientas de solo lectura hechas (`IServicioInfoHotel`, `HerramientasHotel`). Falta: agente real con `ChatHistoryProvider` propio sobre el almacén de memoria, preferencias (`ExtractorPreferencias` o herramienta) y conectar con el modelo
   3. Medir la memoria del pool con el agente completo para cerrar la decisión de hosting (SmarterASP Advance/Premium o plan B Azure App Service)
   4. Elegir la base de datos con `pgvector` para los vectores (`pgvector` no está en el PostgreSQL de SmarterASP, comprobado 2026-10-12); candidata: Azure Database for PostgreSQL Flexible
 - **Si el usuario mueve la carpeta del proyecto:** el `.env` está ignorado por git, así que hay que copiarlo a mano a la raíz nueva (con las tres variables, cada una una sola vez). `.git` y `.claudeignore` viajan con la carpeta. Claude no lee `.env`; solo comprueba su estructura contando caracteres
@@ -52,6 +52,8 @@ Se pasa de ruta de aprendizaje (35 fases, Semantic Kernel primero) a **ruta cort
 | Restaurant, OpeningHours, MenuItem | Restaurante, HorarioApertura, PlatoMenu |
 | Activity, Guest, Stay | Actividad, Huesped, Estancia |
 | IHotelInfoRepository | IRepositorioInfoHotel |
+| IHotelInfoService | IServicioInfoHotel |
+| HotelTools | HerramientasHotel |
 | ConversationRole, ConversationTurn | RolConversacion, TurnoConversacion |
 | MemoryFragment, ScoredMemory | FragmentoMemoria, MemoriaPuntuada |
 | IKeyValueMemoryStore | IAlmacenMemoriaClaveValor |
@@ -71,6 +73,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - `HotelAgentIA.Console` referencia Application e Infrastructure; `Program.cs` ejecuta el escenario de dos huéspedes (305 y 412), con checkout del 305
 - `HotelAgentIA.Api` (fase A, prueba de concepto, no referencia aún a las demás capas): `Program.cs` con `GET /health`, `GET /stream?eventos=N` (SSE, un evento por segundo) y `GET /modelo?q=` (`OpenAIClient` con `Endpoint = <host>/openai/v1/` y la clave, `.GetChatClient(despliegue).AsAIAgent(...)`; 503 si faltan variables). Carga `.env` con DotNetEnv (`NoClobber().TraversePath()`). Paquetes: `Microsoft.Agents.AI.OpenAI` 1.24.0 y `DotNetEnv` 3.2.0. Compila sin advertencias; `/health`, `/stream` y `/modelo` probados en local (`/modelo` responde 200 contra el modelo)
 - Infrastructure (fase B), `Chat/` y `Persistencia/`: `ClienteChatFalso`, `HotelDbContext`, entidades, migración `Inicial`, `RepositorioInfoHotel`, `SemillaDatos`, `FabricaHotelDbContext`. La consola corre `PruebaAgenteOffline` y `PruebaBaseDatos` (migra, siembra y lee de Docker)
+- Application (fase B): `Hotel/` con `IServicioInfoHotel` y `ServicioInfoHotel` (usa `TimeProvider`), `Agente/` con `HerramientasHotel` (`consultar_restaurantes`, `consultar_menu`, `consultar_actividades`, `consultar_mi_estancia`); referencia `Microsoft.Extensions.AI.Abstractions`. La consola corre también `PruebaHerramientas`
 - `HotelAgent.slnx` referencia los 5 proyectos
 - `docs/FASE-A-VALIDACION.md`: hallazgos de la validación (versiones, API verificada, límites de SmarterASP)
 
@@ -99,6 +102,9 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 
 - Fase B: `ClienteChatFalso` (Infrastructure/Chat) permite probar el agente sin red; `AsAIAgent` sobre `IChatClient` está en el namespace `Microsoft.Extensions.AI`, y la sesión acumula el historial entre turnos
 - Fase B: Npgsql arrastra EF Core 10.0.4 y Design trae 10.0.12 (aviso MSB3277): se fijan EF Core y Relational a 10.0.12 en Infrastructure; los tres se actualizan juntos. Npgsql exige `DateTimeOffset` en UTC
+- Fase B: el huésped llega a las herramientas por construcción, no por argumento: `HerramientasHotel(servicio, huespedId)` se crea por petición con el huésped del token y se pasa en `ChatClientAgentRunOptions(new ChatOptions { Tools = ... })`; el agente es único y ninguna herramienta tiene parámetro de huésped, así el modelo no puede elegirlo. La documentación de Agent Framework (.NET) ofrece además `AIAgent.CurrentRunContext` (RunOptions/Session) y middleware que inyecta argumentos, pero eso deja el parámetro visible en el esquema que ve el modelo
+- Fase B: en `AIFunctionFactory.Create` un parámetro `string?` sin valor por defecto es obligatorio y la llamada falla con "Function failed" si el modelo lo omite; los opcionales llevan `= null` y `CancellationToken ct = default` va el último
+- Fase B: `ClienteChatFalso.ConLlamadaAHerramienta` simula que el modelo llama a una herramienta y comprueba que las herramientas por petición llegan; las respuestas de herramientas son texto en español para ahorrar tokens y los errores previsibles (restaurante inexistente, fecha inválida) se devuelven como texto, no como excepción
 - Fase B: las entidades de EF viven en Infrastructure (`Persistencia/Entidades`), separadas de los `record` de Domain; `RepositorioInfoHotel` hace el mapeo. `FabricaHotelDbContext` (lee `POSTGRES_CONNECTION` del `.env`) permite `dotnet ef`; la consola es el proyecto de arranque
 
 ## Limitaciones conocidas
@@ -109,6 +115,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Añadir `using HotelAgentIA.Application;` dentro de un archivo de Domain, compilar y anotar el error; luego quitarlo
 
 ## Para fases siguientes
+- Zona horaria del hotel: `ServicioInfoHotel.Hoy()` usa la hora local del servidor (`TimeProvider`); en el hosting puede no ser la del hotel. Configurar una zona horaria del hotel
 - Fase 5: decidir dónde vive la clave del wifi (no va en `Estancia`)
 - Fase 5: representar horarios que cierran pasada la medianoche (`HorarioApertura` con `TimeOnly`)
 
