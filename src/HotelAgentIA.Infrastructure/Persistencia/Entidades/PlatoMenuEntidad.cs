@@ -8,4 +8,7 @@ public class PlatoMenuEntidad
     public required string Descripcion { get; set; }
     public decimal Precio { get; set; }
     public string[] EtiquetasDieteticas { get; set; } = [];
+
+    /// <summary>Franjas en minusculas (desayuno, almuerzo, cena); vacia = cualquier comida.</summary>
+    public string[] Comidas { get; set; } = [];
 }

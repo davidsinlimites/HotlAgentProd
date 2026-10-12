@@ -37,7 +37,7 @@ internal static class PruebaBaseDatos
 
             foreach (var plato in await repositorio.ObtenerMenuAsync(restaurante.Id))
             {
-                Console.WriteLine($"    {plato.Nombre} - {plato.Precio:0.00} [{string.Join(", ", plato.EtiquetasDieteticas)}]");
+                Console.WriteLine($"    {plato.Nombre} - {plato.Precio:0.00} [{string.Join(", ", plato.EtiquetasDieteticas)}] ({string.Join(", ", plato.Comidas)})");
             }
         }
 

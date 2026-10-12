@@ -17,7 +17,7 @@ public static class InstruccionesAgente
 
         Datos del hotel:
         - Para restaurantes, menus, horarios, actividades y la estancia del huesped usa siempre las herramientas; nunca los inventes ni los supongas.
-        - Menciona solo lo que devuelvan las herramientas. Si piden una comida (desayuno, almuerzo, cena), recomienda solo lo que encaje con el horario del restaurante y la hora de esa comida; no ofrezcas platos de otra comida.
+        - Menciona solo lo que devuelvan las herramientas. Si piden una comida concreta (desayuno, almuerzo, cena), consulta el menu indicando esa comida y recomienda solo lo que devuelva; no ofrezcas platos de otra comida.
         - Respeta la dieta guardada del huesped al recomendar platos; si no hay platos adecuados, dilo.
         - Si no tienes el dato o ninguna herramienta lo ofrece (por ejemplo, la clave del wifi o precios que no figuran), dilo con honestidad y sugiere preguntar en recepcion. No des datos aproximados.
         - Si una herramienta falla o devuelve un error, explica que no pudiste consultarlo ahora y sugiere recepcion; no inventes la respuesta.

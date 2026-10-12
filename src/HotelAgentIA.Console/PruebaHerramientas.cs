@@ -60,6 +60,15 @@ internal static class PruebaHerramientas
             .AsAIAgent(instructions: "Eres el asistente de un hotel.");
         Console.WriteLine($"   {await EjecutarComoAsync(agenteMenu, servicio, "305")}");
 
+        Console.WriteLine("-- consultar_menu por comida: cena no debe incluir el desayuno; una comida invalida se explica");
+        foreach (var comida in new[] { "cena", "desayuno", "brunch" })
+        {
+            var agenteComida = ClienteChatFalso
+                .ConLlamadaAHerramienta("consultar_menu", new Dictionary<string, object?> { ["restauranteId"] = "principal", ["comida"] = comida })
+                .AsAIAgent(instructions: "x");
+            Console.WriteLine($"   {comida}: {(await EjecutarComoAsync(agenteComida, servicio, "305")).ReplaceLineEndings(" | ")}");
+        }
+
         Console.WriteLine("-- consultar_restaurantes y consultar_actividades");
         var agenteRestaurantes = ClienteChatFalso.ConLlamadaAHerramienta("consultar_restaurantes").AsAIAgent(instructions: "x");
         Console.WriteLine($"   {await EjecutarComoAsync(agenteRestaurantes, servicio, "305")}");

@@ -25,10 +25,10 @@ public static class SemillaDatos
                 Horarios = todosLosDias.Select(d => Horario(d, 7, 0, 22, 30)).ToList(),
                 Platos =
                 [
-                    Plato("principal-desayuno", "Desayuno buffet", "Fruta, panes, huevos, cafe y jugos.", 18m, "vegetariano"),
-                    Plato("principal-risotto", "Risotto de setas", "Arroz arborio, setas y parmesano.", 21m, "vegetariano", "sin-frutos-secos"),
-                    Plato("principal-salmon", "Salmon a la plancha", "Con verduras asadas y pure.", 29m, "sin-gluten"),
-                    Plato("principal-curry", "Curry de garbanzos", "Garbanzos, coco y especias con arroz basmati.", 19m, "vegano", "sin-gluten")
+                    Plato("principal-desayuno", "Desayuno buffet", "Fruta, panes, huevos, cafe y jugos.", 18m, ["desayuno"], "vegetariano"),
+                    Plato("principal-risotto", "Risotto de setas", "Arroz arborio, setas y parmesano.", 21m, ["almuerzo", "cena"], "vegetariano", "sin-frutos-secos"),
+                    Plato("principal-salmon", "Salmon a la plancha", "Con verduras asadas y pure.", 29m, ["almuerzo", "cena"], "sin-gluten"),
+                    Plato("principal-curry", "Curry de garbanzos", "Garbanzos, coco y especias con arroz basmati.", 19m, ["almuerzo", "cena"], "vegano", "sin-gluten")
                 ]
             },
             new RestauranteEntidad
@@ -40,8 +40,8 @@ public static class SemillaDatos
                 Horarios = todosLosDias.Select(d => Horario(d, 11, 0, 19, 0)).ToList(),
                 Platos =
                 [
-                    Plato("bar-ensalada", "Ensalada fresca", "Hojas verdes, tomate, aguacate y vinagreta.", 12m, "vegano", "sin-gluten"),
-                    Plato("bar-club", "Club sandwich", "Pollo, bacon, huevo y patatas fritas.", 15m)
+                    Plato("bar-ensalada", "Ensalada fresca", "Hojas verdes, tomate, aguacate y vinagreta.", 12m, ["almuerzo", "cena"], "vegano", "sin-gluten"),
+                    Plato("bar-club", "Club sandwich", "Pollo, bacon, huevo y patatas fritas.", 15m, ["almuerzo", "cena"])
                 ]
             });
 
@@ -68,8 +68,8 @@ public static class SemillaDatos
     private static HorarioAperturaEntidad Horario(DayOfWeek dia, int hAbre, int mAbre, int hCierra, int mCierra) =>
         new() { RestauranteId = "", Dia = dia, Abre = new TimeOnly(hAbre, mAbre), Cierra = new TimeOnly(hCierra, mCierra) };
 
-    private static PlatoMenuEntidad Plato(string id, string nombre, string descripcion, decimal precio, params string[] etiquetas) =>
-        new() { Id = id, RestauranteId = "", Nombre = nombre, Descripcion = descripcion, Precio = precio, EtiquetasDieteticas = etiquetas };
+    private static PlatoMenuEntidad Plato(string id, string nombre, string descripcion, decimal precio, string[] comidas, params string[] etiquetas) =>
+        new() { Id = id, RestauranteId = "", Nombre = nombre, Descripcion = descripcion, Precio = precio, Comidas = comidas, EtiquetasDieteticas = etiquetas };
 
     private static ActividadEntidad Actividad(string id, string nombre, string descripcion, string ubicacion, DayOfWeek dia, int hIni, int mIni, int hFin, int mFin) =>
         new() { Id = id, Nombre = nombre, Descripcion = descripcion, Ubicacion = ubicacion, Dia = dia, Inicio = new TimeOnly(hIni, mIni), Fin = new TimeOnly(hFin, mFin) };

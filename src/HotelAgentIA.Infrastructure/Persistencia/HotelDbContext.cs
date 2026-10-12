@@ -41,6 +41,7 @@ public class HotelDbContext(DbContextOptions<HotelDbContext> opciones) : DbConte
             e.Property(x => x.Nombre).HasMaxLength(200);
             e.Property(x => x.Precio).HasPrecision(10, 2);
             e.Property(x => x.EtiquetasDieteticas).HasColumnType("text[]");
+            e.Property(x => x.Comidas).HasColumnType("text[]");
         });
 
         modelo.Entity<ActividadEntidad>(e =>

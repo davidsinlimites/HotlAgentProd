@@ -36,7 +36,8 @@ public sealed class RepositorioInfoHotel(HotelDbContext db) : IRepositorioInfoHo
             .ToListAsync(ct);
 
         return entidades
-            .Select(p => new PlatoMenu(p.Id, p.RestauranteId, p.Nombre, p.Descripcion, p.Precio, p.EtiquetasDieteticas))
+            .Select(p => new PlatoMenu(p.Id, p.RestauranteId, p.Nombre, p.Descripcion, p.Precio, p.EtiquetasDieteticas,
+                p.Comidas.Select(c => Enum.Parse<Comida>(c, ignoreCase: true)).ToList()))
             .ToList();
     }
 

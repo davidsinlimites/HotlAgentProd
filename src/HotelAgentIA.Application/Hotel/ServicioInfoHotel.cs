@@ -10,22 +10,27 @@ public sealed class ServicioInfoHotel(IRepositorioInfoHotel repositorio, TimePro
         repositorio.ObtenerRestaurantesAsync(ct);
 
     public async Task<IReadOnlyList<PlatoMenu>?> ObtenerMenuAsync(
-        string restauranteId, string? etiquetaDietetica = null, CancellationToken ct = default)
+        string restauranteId, string? etiquetaDietetica = null, Comida? comida = null, CancellationToken ct = default)
     {
         if (await repositorio.ObtenerRestauranteAsync(restauranteId, ct) is null)
         {
             return null;
         }
 
-        var menu = await repositorio.ObtenerMenuAsync(restauranteId, ct);
-        if (string.IsNullOrWhiteSpace(etiquetaDietetica))
+        IEnumerable<PlatoMenu> menu = await repositorio.ObtenerMenuAsync(restauranteId, ct);
+
+        // Un plato sin comidas se sirve en cualquier franja
+        if (comida is { } franja)
         {
-            return menu;
+            menu = menu.Where(p => p.Comidas.Count == 0 || p.Comidas.Contains(franja));
         }
 
-        return menu
-            .Where(p => p.EtiquetasDieteticas.Contains(etiquetaDietetica.Trim(), StringComparer.OrdinalIgnoreCase))
-            .ToList();
+        if (!string.IsNullOrWhiteSpace(etiquetaDietetica))
+        {
+            menu = menu.Where(p => p.EtiquetasDieteticas.Contains(etiquetaDietetica.Trim(), StringComparer.OrdinalIgnoreCase));
+        }
+
+        return menu.ToList();
     }
 
     public Task<IReadOnlyList<Actividad>> ObtenerActividadesAsync(DateOnly? fecha = null, CancellationToken ct = default) =>

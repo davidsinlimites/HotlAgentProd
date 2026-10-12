@@ -138,6 +138,10 @@ namespace HotelAgentIA.Infrastructure.Persistencia.Migraciones
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.PrimitiveCollection<string[]>("Comidas")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasColumnType("text");

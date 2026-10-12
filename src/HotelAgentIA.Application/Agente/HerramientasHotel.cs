@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using HotelAgentIA.Application.Hotel;
+using HotelAgentIA.Domain.Hotel;
 using Microsoft.Extensions.AI;
 
 namespace HotelAgentIA.Application.Agente;
@@ -48,13 +49,25 @@ public sealed class HerramientasHotel
         }));
     }
 
-    [Description("Muestra el menu de un restaurante. Opcionalmente filtra por etiqueta dietetica, por ejemplo vegano, vegetariano o sin-gluten.")]
+    [Description("Muestra el menu de un restaurante. Opcionalmente filtra por etiqueta dietetica (vegano, vegetariano, sin-gluten) y por comida (desayuno, almuerzo, cena). Si el huesped pregunta por una comida concreta, indica la comida.")]
     private async Task<string> ConsultarMenu(
         [Description("Identificador del restaurante, tal como lo devuelve consultar_restaurantes.")] string restauranteId,
         [Description("Etiqueta dietetica para filtrar. Omitir para ver todo el menu.")] string? etiquetaDietetica = null,
+        [Description("Comida: desayuno, almuerzo o cena. Omitir para ver todas.")] string? comida = null,
         CancellationToken ct = default)
     {
-        var menu = await _servicio.ObtenerMenuAsync(restauranteId, etiquetaDietetica, ct);
+        Comida? franja = null;
+        if (!string.IsNullOrWhiteSpace(comida))
+        {
+            if (!Enum.TryParse<Comida>(comida.Trim(), ignoreCase: true, out var valida) || !Enum.IsDefined(valida))
+            {
+                return $"La comida '{comida}' no es valida; usa desayuno, almuerzo o cena.";
+            }
+
+            franja = valida;
+        }
+
+        var menu = await _servicio.ObtenerMenuAsync(restauranteId, etiquetaDietetica, franja, ct);
         if (menu is null)
         {
             return $"No existe el restaurante '{restauranteId}'. Usa consultar_restaurantes para ver los identificadores validos.";
@@ -68,7 +81,8 @@ public sealed class HerramientasHotel
         return string.Join("\n", menu.Select(p =>
         {
             var etiquetas = p.EtiquetasDieteticas.Count == 0 ? "" : $" [{string.Join(", ", p.EtiquetasDieteticas)}]";
-            return $"- {p.Nombre}: {p.Descripcion} Precio {p.Precio.ToString("0.00", Cultura)}.{etiquetas}";
+            var comidas = p.Comidas.Count == 0 ? "" : $" Se sirve en: {string.Join(", ", p.Comidas.Select(c => c.ToString().ToLowerInvariant()))}.";
+            return $"- {p.Nombre}: {p.Descripcion} Precio {p.Precio.ToString("0.00", Cultura)}.{etiquetas}{comidas}";
         }));
     }
 
