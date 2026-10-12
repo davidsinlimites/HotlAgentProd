@@ -117,7 +117,10 @@ app.MapGet("/health/db", async (HotelDbContext db, CancellationToken ct) =>
             estado = "error",
             tipo = ex.GetType().Name,
             interno = ex.InnerException?.GetType().Name,
-            codigoSql = (ex as Npgsql.PostgresException ?? ex.InnerException as Npgsql.PostgresException)?.SqlState
+            codigoSql = (ex as Npgsql.PostgresException ?? ex.InnerException as Npgsql.PostgresException)?.SqlState,
+            // Solo los metodos de la pila (sin mensaje ni valores): dicen donde fallo sin revelar datos de conexion
+            origen = new System.Diagnostics.StackTrace(ex, false).GetFrames().Take(4)
+                .Select(f => f.GetMethod() is { } m ? $"{m.DeclaringType?.Name}.{m.Name}" : "?")
         }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 });
