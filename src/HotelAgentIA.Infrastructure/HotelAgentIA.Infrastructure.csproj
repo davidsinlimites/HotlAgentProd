@@ -3,4 +3,7 @@
     <ProjectReference Include="..\HotelAgentIA.Application\HotelAgentIA.Application.csproj" />
     <ProjectReference Include="..\HotelAgentIA.Domain\HotelAgentIA.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.1" />
+  </ItemGroup>
 </Project>

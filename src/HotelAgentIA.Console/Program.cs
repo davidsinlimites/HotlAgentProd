@@ -27,6 +27,8 @@ await almacen.EliminarPorPrefijoAsync(ClavesMemoria.PrefijoHuesped("305"));
 
 await MostrarEstadoAsync("Tras el checkout del 305");
 
+await PruebaAgenteOffline.EjecutarAsync();
+
 async Task MostrarEstadoAsync(string titulo)
 {
     Console.WriteLine($"=== {titulo} ===");
