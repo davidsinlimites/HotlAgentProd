@@ -5,6 +5,13 @@ using HotelAgentIA.Infrastructure.Memoria;
 
 Console.OutputEncoding = Encoding.UTF8;
 
+// Solo prepara la base apuntada por POSTGRES_CONNECTION (migra y siembra) y termina: sin pruebas ni gasto de tokens
+if (args.Contains("--solo-bd", StringComparer.Ordinal))
+{
+    await PruebaBaseDatos.EjecutarAsync();
+    return;
+}
+
 var almacen = new AlmacenMemoriaClaveValorEnMemoria();
 var preferencias = new ServicioPreferencias(almacen);
 var conversacion = new ServicioConversacion(almacen);

@@ -6,7 +6,7 @@
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
 
 ## Para retomar (leer primero)
-- **Dónde nos quedamos (2026-10-12):** fase B cerrada (agente con modelo real, escritura de preferencias, instrucciones, menú por comida). Fase C empezada: `src/HotelAgentIA.Api` es ahora la API real (se eliminaron `/stream` y `/modelo` de la prueba de la fase A, que dejaban el modelo abierto sin autenticación; `/health` se queda). **Lo siguiente en C, en orden:** (1) HECHO: `AlmacenMemoriaClaveValorPostgres` (tabla `memoria_clave_valor`, migración `MemoriaClaveValor`) y `ActualizarAsync` atómico en el contrato; (2) añadir `JWT_SIGNING_KEY` (≥32 bytes), `POSTGRES_CONNECTION` y `DEV_TOKENS=true` al `.env` y a las variables del pool del hosting, republicar y probar allí; (3) logs sin datos sensibles revisados y checkout que borre la memoria del huésped; (4) pruebas de la API en un proyecto de tests. Fase A: la API de prueba sigue publicada en https://davidroblero-001-site2.ftempurl.com/ con el código antiguo hasta republicar
+- **Dónde nos quedamos (2026-10-12):** fase B cerrada (agente con modelo real, escritura de preferencias, instrucciones, menú por comida). Fase C empezada: `src/HotelAgentIA.Api` es ahora la API real (se eliminaron `/stream` y `/modelo` de la prueba de la fase A, que dejaban el modelo abierto sin autenticación; `/health` se queda). **Lo siguiente en C, en orden:** (1) HECHO: `AlmacenMemoriaClaveValorPostgres` (tabla `memoria_clave_valor`, migración `MemoriaClaveValor`) y `ActualizarAsync` atómico en el contrato; (2) PARCIAL: la base PostgreSQL del hosting ya tiene las migraciones y la semilla (2026-10-12, con `dotnet run --project src/HotelAgentIA.Console -- --solo-bd`, que migra y siembra la base de `POSTGRES_CONNECTION` y termina); faltan publicar la Api y probar allí. Antes: añadir `JWT_SIGNING_KEY` (≥32 bytes), `POSTGRES_CONNECTION` y `DEV_TOKENS=true` al `.env` y a las variables del pool del hosting, republicar y probar allí; (3) logs sin datos sensibles revisados y checkout que borre la memoria del huésped; (4) pruebas de la API en un proyecto de tests. Fase A: la API de prueba sigue publicada en https://davidroblero-001-site2.ftempurl.com/ con el código antiguo hasta republicar
 - **Causa del 500 inicial (resuelta 2026-10-12):** el sitio iba en InProcess y el pool solo admite una app InProcess (otro sitio la ocupaba; error 500.35). Se corrige con `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en el `.csproj` de la Api, para que el `web.config` publicado ya lleve `outofprocess`. Hasta republicar, el `web.config` del servidor tiene el arreglo a mano. Las variables de entorno son por pool y el proceso las lee sin configuración en el proyecto
 - **Pasos siguientes, en orden:**
   1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
@@ -124,6 +124,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Fase C: los datos de prueba de la API en tu base local (huésped 305) se quedan guardados; para limpiarlos, `EliminarPorPrefijoAsync(ClavesMemoria.PrefijoHuesped("305"))`
 
 ## Limitaciones conocidas
+- La semilla fija las estancias relativas al momento de sembrar (305 hasta 2026-10-15, 412 hasta 2026-10-14): pasada esa fecha `/dev/token` responde 404 y el agente dice que no hay estancia activa. Para renovarlas hay que actualizar las fechas de `estancias` en la base (la semilla no vuelve a correr porque ya hay restaurantes)
 - `/dev/token` es provisional: en producción lo sustituye el login real del hotel (Pregunta abierta: cómo se autentica el huésped)
 - El almacén en memoria (`AlmacenMemoriaClaveValorEnMemoria`) solo sirve para el banco de pruebas: pierde todo al reiniciar. La API usa PostgreSQL
 - Nada borra aún la memoria de un huésped al hacer checkout en la API (`EliminarPorPrefijoAsync` existe y está probado, falta el disparador: el hotel/PMS necesita una credencial de servicio distinta del token del huésped)
@@ -153,6 +154,7 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - (ninguna abierta)
 
 ## Cómo ejecutar
+- Preparar una base nueva (migra y siembra, sin más pruebas): `dotnet run --project src/HotelAgentIA.Console -- --solo-bd`. Usa `POSTGRES_CONNECTION` del `.env`; si el `.env` apunta al hosting, la consola completa también escribiría allí (semilla, claves `prueba*`) y `PruebaModeloReal` gasta tokens: usa `--solo-bd` o apunta el `.env` a la base local
 - Compilar: `dotnet build HotelAgent.slnx`
 - Consola: `dotnet run --project src/HotelAgentIA.Console`
 - API de prueba: `dotnet run --project src/HotelAgentIA.Api` (necesita `.env` en la raíz para `/modelo`)
