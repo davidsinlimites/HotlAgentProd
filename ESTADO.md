@@ -1,12 +1,12 @@
 # Estado de HotelAgentIA
 
-- **Fase actual:** B (Núcleo) casi cerrada: modo offline, datos en PostgreSQL, herramientas y proveedores de historial/preferencias hechos y probados offline; falta ensamblar el agente real con el modelo. Fase A cerrada. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
-- **Fases cerradas:** 0, 1, 2 (del plan original, conservadas) y A
+- **Fase actual:** C (API) en curso. Fases A y B cerradas. La API ya referencia Application e Infrastructure, con JWT, `/chat`, `/chat/stream` (SSE), CORS, límite de uso y OpenAPI, probada en local con el modelo real. Falta: memoria durable en PostgreSQL, publicar en el hosting y probar allí. Ver "Para retomar", `PLAN.md` y `docs/FASE-A-VALIDACION.md`
+- **Fases cerradas:** 0, 1, 2 (del plan original, conservadas), A y B
 - **Última sesión:** 2026-10-12
 - **Repositorio:** https://github.com/davidsinlimites/HotlAgentProd (historial nuevo; el anterior se descartó)
 
 ## Para retomar (leer primero)
-- **Dónde nos quedamos (2026-10-12):** fase B con todas las piezas del agente probadas sin red (consola: `PruebaAgenteOffline`, `PruebaBaseDatos`, `PruebaHerramientas`, `PruebaProveedores`). Lo siguiente es la fábrica del agente y conectarla al modelo (ver paso 2). Fase A cerrada: la API de prueba (`src/HotelAgentIA.Api`) está publicada en https://davidroblero-001-site2.ftempurl.com/ y en el hosting `/health` (.NET 10.0.7, 48 MB), `/stream` (un evento por segundo, sin buffering) y `/modelo` (200 contra el modelo) funcionan. Resultados en `docs/FASE-A-VALIDACION.md`, sección 6
+- **Dónde nos quedamos (2026-10-12):** fase B cerrada (agente con modelo real, escritura de preferencias, instrucciones, menú por comida). Fase C empezada: `src/HotelAgentIA.Api` es ahora la API real (se eliminaron `/stream` y `/modelo` de la prueba de la fase A, que dejaban el modelo abierto sin autenticación; `/health` se queda). **Lo siguiente en C, en orden:** (1) implementación PostgreSQL de `IAlmacenMemoriaClaveValor` (hoy el almacén en memoria pierde todo al reiniciar y IIS recicla el pool; resolver también la carrera leer-modificar-escribir de `ServicioConversacion`); (2) añadir `JWT_SIGNING_KEY` (≥32 bytes), `POSTGRES_CONNECTION` y `DEV_TOKENS=true` al `.env` y a las variables del pool del hosting, republicar y probar allí; (3) logs sin datos sensibles revisados y checkout que borre la memoria del huésped; (4) pruebas de la API en un proyecto de tests. Fase A: la API de prueba sigue publicada en https://davidroblero-001-site2.ftempurl.com/ con el código antiguo hasta republicar
 - **Causa del 500 inicial (resuelta 2026-10-12):** el sitio iba en InProcess y el pool solo admite una app InProcess (otro sitio la ocupaba; error 500.35). Se corrige con `<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>` en el `.csproj` de la Api, para que el `web.config` publicado ya lleve `outofprocess`. Hasta republicar, el `web.config` del servidor tiene el arreglo a mano. Las variables de entorno son por pool y el proceso las lee sin configuración en el proyecto
 - **Pasos siguientes, en orden:**
   1. Republicar la Api desde Visual Studio para que el `web.config` salga con `outofprocess` desde el `.csproj`, y volver a comprobar `/health`
@@ -69,6 +69,7 @@ Se pasa de ruta de aprendizaje (35 fases, Semantic Kernel primero) a **ruta cort
 Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 
 ## Estado del código
+- `HotelAgentIA.Api` (fase C): `Program.cs` es la raíz de composición (JWT, CORS con `CORS_ORIGINS`, límite de 20 peticiones/min por huésped, DbContext, servicios, `AsistenteHotel` por petición, OpenAPI en Development). `Seguridad/` (`OpcionesJwt`, `EmisorTokens`, `UsuarioExtensiones.HuespedId`), `Chat/` (`PuntosFinalesChat`: `POST /chat` y `POST /chat/stream`, `Contratos`), `ManejadorExcepciones` (JSON inválido → 400). `POST /dev/token` solo existe con `DEV_TOKENS=true` y solo emite para huéspedes con estancia activa; la caducidad no pasa de la salida (máx. 12 h). Variables: `JWT_SIGNING_KEY`, `JWT_ISSUER` y `JWT_AUDIENCE` (opcionales), `CORS_ORIGINS`, `POSTGRES_CONNECTION`, `AZURE_OPENAI_*`, `DEV_TOKENS`
 - Domain con modelos y contratos (fase 1):
   - `Hotel/`: Restaurante, HorarioApertura, PlatoMenu, Actividad, Huesped, Estancia, IRepositorioInfoHotel
   - `Memoria/`: RolConversacion, TurnoConversacion, FragmentoMemoria, MemoriaPuntuada, IAlmacenMemoriaClaveValor, IMemoriaVectorial
@@ -117,7 +118,11 @@ Para nombres nuevos que el plan da en inglés se sigue la misma convención.
 - Fase B: la herramienta de escritura es la única excepción a "herramientas de solo lectura": solo toca las preferencias del propio huésped y con valores de conjunto cerrado. Con el modelo real guardó hora de desayuno e idioma de un mensaje y no guardó nada ante un intento de inyección: el filtro de contenido de Azure lo bloqueó antes con HTTP 400 `content_filter` (`ClientResultException`), que la API de la fase C debe capturar y convertir en una respuesta amable. Con idioma=en el modelo aún respondió en español en el streaming: reforzar en las instrucciones (paso 4)
 - Fase B: `PlatoMenu` lleva `Comidas` (enum `Comida`: Desayuno, Almuerzo, Cena; lista vacía = cualquier comida), columna `text[]` `Comidas` en `platos_menu` (migración `ComidasEnPlatos`, que también ajusta los platos de ejemplo porque la semilla es idempotente). `consultar_menu(restauranteId, etiquetaDietetica, comida)` filtra por franja y valida la comida. Con el modelo real, cena y almuerzo ya no ofrecen el desayuno buffet. Lección: un fallo del modelo a veces es de datos, no de instrucciones
 
+- Fase C: el huésped sale del claim `sub` del JWT (`MapInboundClaims = false`); probado que el 305 no puede ver datos del 412. `AsistenteHotel` se registra por ámbito (usa el DbContext), no como singleton. El filtro de contenido de Azure se traduce a 422 y otros fallos del modelo a 502, registrando solo el tipo de error, nunca el mensaje. En SSE, si el error ocurre tras empezar, viaja como evento `error`. Los `curl` desde la consola de Windows mandan CP1252: para probar con tildes usar `--data-binary @archivo` en UTF-8. `launchSettings.json` pisa `ASPNETCORE_URLS` en local (puertos 55001/55002)
+
 ## Limitaciones conocidas
+- Fase C: la memoria de conversación y preferencias sigue en el almacén en memoria; se pierde al reiniciar
+- `/dev/token` es provisional: en producción lo sustituye el login real del hotel (Pregunta abierta: cómo se autentica el huésped)
 - `ServicioConversacion` hace leer-modificar-escribir sobre una sola clave: dos mensajes simultáneos del mismo huésped podrían pisarse. Revisar al pasar a PostgreSQL
 - El almacén en memoria pierde todo al reiniciar (se resuelve con PostgreSQL)
 

@@ -4,6 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="DotNetEnv" Version="3.2.0" />
-    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.24.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HotelAgentIA.Application\HotelAgentIA.Application.csproj" />
+    <ProjectReference Include="..\HotelAgentIA.Infrastructure\HotelAgentIA.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
