@@ -11,7 +11,7 @@ HotelAgentIA: agente de IA para huéspedes de un hotel (.NET 10, C#), con web (R
 - Compilar: `dotnet build HotelAgent.slnx`
 - Consola (banco de pruebas): `dotnet run --project src/HotelAgentIA.Console`
 - API (fase C): `dotnet run --project src/HotelAgentIA.Api`; endpoints `/health`, `POST /chat`, `POST /chat/stream` (JWT) y `POST /dev/token` (solo con `DEV_TOKENS=true`). Necesita `JWT_SIGNING_KEY` (≥32 bytes) y `POSTGRES_CONNECTION` además de `AZURE_OPENAI_*`.
-- Tests: `dotnet test tests/HotelAgentIA.Tests` (xUnit, sin red ni base de datos reales: repositorio, almacén y modelo son falsos). El monorepo `frontend/` (pnpm: Vite + React + TS + Tailwind, Expo) todavía no existe.
+- Tests: `dotnet test tests/HotelAgentIA.Tests` (xUnit, sin red ni base de datos reales: repositorio, almacén y modelo son falsos). Frontend (`frontend/`, pnpm): `pnpm dev` (web con proxy a la API local), `pnpm -r typecheck`, `pnpm --filter @hotelagent/chat-core test`; el móvil (Expo) todavía no existe. Tras cambiar endpoints de la API, regenerar `packages/api-client/openapi.json` (API en Development) y ejecutar `pnpm --filter @hotelagent/api-client generar`.
 - Los nombres de paquetes y métodos de Agent Framework y Foundry se verifican en la documentación oficial antes de escribir código; lo ya verificado está en `docs/FASE-A-VALIDACION.md`.
 - Secretos: el modelo se configura con `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` y `AZURE_OPENAI_DEPLOYMENT` en un `.env` en la raíz (ignorado por git y por `.claudeignore`). No lo leas, no lo imprimas ni lo añadas a commits; para saber si está relleno, cuenta caracteres sin mostrar valores.
 

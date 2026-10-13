@@ -16,9 +16,21 @@ public static class PuntosFinalesChat
     {
         var grupo = rutas.MapGroup("/chat").RequireAuthorization().RequireRateLimiting(PoliticaLimite);
 
-        grupo.MapPost("/", ResponderAsync).WithName("Chat").WithSummary("Responde al mensaje del huesped autenticado.");
+        grupo.MapPost("/", ResponderAsync).WithName("Chat").WithSummary("Responde al mensaje del huesped autenticado.")
+            .Produces<RespuestaChat>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status502BadGateway);
         grupo.MapPost("/stream", ResponderEnStreamingAsync).WithName("ChatStream")
-            .WithSummary("Igual que /chat pero por SSE: eventos 'data' con trozos de texto en JSON y un evento 'fin'.");
+            .WithSummary("Igual que /chat pero por SSE: eventos 'data' con trozos de texto en JSON y un evento 'fin'.")
+            .Produces(StatusCodes.Status200OK, contentType: "text/event-stream")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status502BadGateway);
     }
 
     private static async Task<IResult> ResponderAsync(

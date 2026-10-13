@@ -39,7 +39,7 @@ Cambios en decisiones: MySQL → PostgreSQL; fase de SK eliminada; `ESTADO.md` y
 10. ✅ JWT (`sub` = huésped, `habitacion`; caduca como máximo a la salida de la estancia); CORS por `CORS_ORIGINS`; límite de 20 peticiones/min por huésped; errores controlados (400, 401, 422, 429, 502); logs sin mensajes del huésped. **Aplazado a producción:** login real del huésped (hoy `POST /dev/token`, solo demo).
 11. ✅ Memoria persistente en PostgreSQL con actualización atómica por clave. **Aplazado:** disparador del borrado en checkout (el mecanismo existe y está probado; falta la credencial de servicio del hotel) y sessionId distinto de guestId (v2).
 
-**D. Clientes** — ⏭ *siguiente* (todo con librerías gratuitas de código abierto; stack detallado en la sección siguiente)
+**D. Clientes** — 🔄 *en curso (api-client, chat-core y web hechos; falta móvil)* (todo con librerías gratuitas de código abierto; stack detallado en la sección siguiente)
 12. Monorepo `frontend/` con pnpm workspaces: `apps/web`, `apps/mobile`, `packages/api-client`, `packages/chat-core`.
 13. `api-client`: cliente TypeScript generado desde el OpenAPI de la API.
 14. Web: Vite + React + TypeScript + Tailwind, chat con streaming SSE.

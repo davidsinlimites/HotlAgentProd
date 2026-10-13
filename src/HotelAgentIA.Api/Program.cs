@@ -135,7 +135,9 @@ if (config.GetValue<bool>("DEV_TOKENS"))
         return estancia is null
             ? Results.Problem("El huésped no tiene una estancia activa.", statusCode: StatusCodes.Status404NotFound)
             : Results.Ok(new RespuestaToken(emisor.Emitir(estancia), reloj.GetUtcNow() + EmisorTokens.DuracionMaxima));
-    }).WithName("TokenDeDesarrollo");
+    }).WithName("TokenDeDesarrollo")
+      .Produces<RespuestaToken>()
+      .ProducesProblem(StatusCodes.Status404NotFound);
 }
 
 app.MapearChat();

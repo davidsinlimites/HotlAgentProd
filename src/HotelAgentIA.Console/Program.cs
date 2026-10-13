@@ -12,6 +12,13 @@ if (args.Contains("--solo-bd", StringComparer.Ordinal))
     return;
 }
 
+// Renueva las fechas de las estancias de ejemplo en la base apuntada por POSTGRES_CONNECTION
+if (args.Contains("--renovar-estancias", StringComparer.Ordinal))
+{
+    await RenovarEstancias.EjecutarAsync();
+    return;
+}
+
 var almacen = new AlmacenMemoriaClaveValorEnMemoria();
 var preferencias = new ServicioPreferencias(almacen);
 var conversacion = new ServicioConversacion(almacen);
