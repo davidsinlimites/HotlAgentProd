@@ -45,6 +45,13 @@ Cambios en decisiones: MySQL → PostgreSQL; fase de SK eliminada; `ESTADO.md` y
 14. Web: Vite + React + TypeScript + Tailwind, chat con streaming SSE.
 15. Móvil: Expo (React Native) reutilizando `api-client` y `chat-core`; login/token del huésped.
 
+## Reordenación de prioridades (2026-10-15)
+Orden acordado desde ahora (sustituye al orden D → E de arriba; las fases siguen siendo las mismas):
+1. **Prueba de File Search de Foundry con nuestro agente** (sin RAG propio): ver `ESTADO.md`, "Prueba File Search". Objetivo: poder demostrar un PDF ficticio de hotel en una presentación.
+2. **Desplegar el frontend web para pruebas** (decidir hosting de estáticos: SmarterASP o `UseStaticFiles` de la API; `VITE_API_URL` y `CORS_ORIGINS`) y dejarlo funcionando. Incluye renovar estancias y `DEV_TOKENS` solo para demo.
+3. **Probar el móvil** (Expo Go; no urgente).
+4. **RAG propio** (fase nueva, al final): base PostgreSQL aparte con `pgvector` (tablas `documentos` y `fragmentos`, estado pendiente/revisado/publicado), contrato nuevo `IBaseConocimiento` sin `huespedId` (distinto de `IMemoriaVectorial`, que es memoria por huésped), servicio de ingesta (extracción del PDF, troceado, embeddings, revisión humana) y herramienta de solo lectura `buscar_informacion_hotel`.
+
 ## Stack frontend (todo gratuito / MIT)
 | Necesidad | Elección | Nota |
 |---|---|---|
